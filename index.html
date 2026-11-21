@@ -739,6 +739,62 @@ async function loadStation(onProgress){
       sl.group.add(hanger.clone(true)); }
   }
   state.baked = true;
+  addLookPanels();
+  try { await loadGarments(); } catch(e){ console.warn('garments', e); }
+}
+
+/* ===== 線路側の壁：ルック写真のポスター（サイト側で貼るので差し替えはファイル交換だけ） ===== */
+const LOOK_PANELS = [ { z: 10.44, img:'assets/look/look_1.jpg' }, { z: 1.44, img:'assets/look/look_2.jpg' }, { z:-7.56, img:'assets/look/look_3.jpg' } ];
+function wallPanelGeo(r, a0deg, a1deg, z0, z1, seg){
+  const a0=a0deg*D2R, a1=a1deg*D2R, pos=[], nor=[], uv=[], idx=[];
+  for (let i=0;i<=seg;i++){ const t=i/seg, a=a0+(a1-a0)*t, c=Math.cos(a), sn=Math.sin(a);
+    for (const [z,u] of [[z0,0],[z1,1]]){ pos.push(r*c, 1+r*sn, z); nor.push(-c,-sn,0); uv.push(u, t); } }
+  for (let i=0;i<seg;i++){ const p00=i*2, p01=i*2+1, p10=(i+1)*2, p11=(i+1)*2+1; idx.push(p00,p10,p01, p10,p11,p01); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor,3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx); return g;
+}
+function addLookPanels(){
+  const frameMat = new THREE.MeshBasicMaterial({ color:0x0b0b0d, side:THREE.DoubleSide });
+  for (const p of LOOK_PANELS){
+    const tex = new THREE.TextureLoader().load(p.img); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const photo = new THREE.Mesh(wallPanelGeo(3.2, 6.5, 60, p.z-1.9, p.z+1.9, 48), new THREE.MeshBasicMaterial({ map:tex, color:0xa8a8a8, side:THREE.DoubleSide }));
+    const frame = new THREE.Mesh(wallPanelGeo(3.215, 5.6, 61, p.z-1.98, p.z+1.98, 48), frameMat);
+    photo.renderOrder = 1; scene.add(frame, photo);
+  }
+}
+
+/* ===== Blenderの作り方で起こした服の3Dモデル（B）＋ アウターは商品写真の柄（C） ===== */
+const GARMENT_GLB = 'assets/garments.glb?v=2';
+const PHOTO_TEX = new Set(['type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-red','type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-black','type-006-bomber-armor-black','type-006-bomber-armor-olive','type-001-sweat-trucker-jacket-fadedyellow','type-001-sweat-trucker-jacket-ashgray','type-001-sweat-trucker-jacket-washedblack','faded-corduroy-w-tailor-riders-docking-jacket-black','type-001-sweat-trucker-jacket-1','type-001-sweat-trucker-jacket']);
+const photoTexCache = {};
+let GX = null, clothTex = null;
+function photoTex(handle){
+  if (!photoTexCache[handle]){
+    const t = new THREE.TextureLoader().load(`assets/jtex/${encodeURIComponent(handle)}.jpg`);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; photoTexCache[handle] = t;
+  }
+  return photoTexCache[handle];
+}
+async function loadGarments(){
+  const gltf = await new GLTFLoader().loadAsync(GARMENT_GLB);
+  GX = {};
+  gltf.scene.traverse(o => { if (o.isMesh && /^GX_/.test(o.name)){ o.updateWorldMatrix(true,false); const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!g.attributes.normal) g.computeVertexNormals(); g.computeBoundingSphere(); GX[o.name.slice(3)] = g; } });
+  clothTex = fabricTex(); clothTex.repeat.set(7, 7);
+  for (const slot of ALL_SLOTS){
+    const s = state.slots[slot]; if (!s) continue;
+    if (s.type === 'hang'){
+      for (const k of Object.keys(s.geo)) if (GX[k]) s.geo[k] = GX[k];
+      s.mat.map = clothTex; s.mat.roughness = .92; s.mat.needsUpdate = true;
+    } else {
+      s.group.children.forEach((b, k) => { if (!b.isMesh) return; b.geometry = GX.fold; b.position.y = .023 + k*.05; b.rotation.y = (k-1)*.035; });
+      s.mats.forEach(m => { m.map = clothTex; m.needsUpdate = true; });
+      const bag = new THREE.Mesh(GX.bag, s.mats[0]); bag.position.set(0, .17, 0); bag.rotation.y = -.25; bag.visible = false;
+      bag.userData.slot = slot; interactables.push(bag); s.group.add(bag); s.bag = bag;
+    }
+  }
+  state.garments3d = true;
+  applyItems();
 }
 
 /* ===== 商品をシーンに反映 ===== */
@@ -751,10 +807,17 @@ function applyItems(){
     const c = new THREE.Color(it.color);
     if (!it.available) c.multiplyScalar(.45);
     if (s.type === 'hang'){
-      s.mat.color.copy(c);
       s.body.geometry = s.geo[SHAPES[it.kind] ? it.kind : 'tee'];
+      if (state.garments3d && PHOTO_TEX.has(it.handle)){
+        s.mat.map = photoTex(it.handle); s.mat.color.set(it.available ? 0xffffff : 0x737373);
+      } else {
+        if (state.garments3d) s.mat.map = clothTex;
+        s.mat.color.copy(c);
+      }
+      s.mat.needsUpdate = true;
     } else {
       s.mats.forEach((m,i) => { m.color.copy(c).multiplyScalar(1 - i*.06); });
+      if (s.bag){ const isBag = it.kind === 'bag'; s.bag.visible = isBag; s.group.children.forEach(b => { if (b !== s.bag && b.isMesh) b.visible = !isBag; }); }
     }
   }
 }
