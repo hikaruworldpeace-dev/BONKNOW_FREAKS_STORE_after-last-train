@@ -144,6 +144,36 @@ body.touch #hint{display:none}
 #enter:disabled{background:#33343a}
 #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:15;background:rgba(10,11,16,.85);border:1px solid rgba(255,255,255,.15);padding:10px 16px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1}
+#toast.act{pointer-events:auto;display:flex;align-items:center;gap:10px;white-space:normal;max-width:calc(100vw - 24px)}
+#toast .ta{display:flex;gap:6px;flex:none}
+#toast .ta a,#toast .ta button{font-family:var(--mono);font-size:11px;padding:6px 9px;border:1px solid rgba(255,255,255,.3);border-radius:2px;color:#fff;text-decoration:none;white-space:nowrap}
+#toast .ta .pri{background:var(--red);border-color:var(--red)}
+#backBtn{position:fixed;z-index:9;top:62px;left:14px;display:none;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;padding:9px 12px 9px 10px;background:rgba(10,11,16,.8);border:1px solid rgba(255,255,255,.22);border-radius:3px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#backBtn b{font-size:15px;line-height:1}
+#backBtn span{color:rgba(255,255,255,.55)}
+body.digging #backBtn{display:flex}
+#dig .dsz{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+#dig .dsz button{min-width:52px;padding:11px 10px;border:1px solid rgba(255,255,255,.28);border-radius:3px;font-family:var(--mono);font-size:12px;font-weight:700}
+#dig .dsz button:not(:disabled):active{background:var(--red);border-color:var(--red)}
+#dig .dsz button:disabled{opacity:.3;text-decoration:line-through}
+#dig .dsz button.in{border-color:var(--cyan);color:var(--cyan)}
+#dig .dsz .lbl{width:100%;text-align:center;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em}
+#dig .dsz .soldout{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.55);padding:10px}
+#dig .dmore{display:flex;justify-content:center;gap:8px;margin-top:8px}
+#dig .dmore button{font-size:12px;padding:8px 12px;border:1px solid rgba(255,255,255,.18);border-radius:3px;color:rgba(255,255,255,.85)}
+.sbar{display:flex;gap:8px;align-items:center;padding:14px 0 4px}
+.sbar input{flex:1;min-width:0;padding:12px 14px;background:#15161c;border:1px solid rgba(255,255,255,.22);border-radius:3px;font-size:15px;color:#fff;outline:none;-webkit-user-select:text;user-select:text}
+.sbar input:focus{border-color:var(--cyan)}
+.srow{display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;align-items:center}
+.srow .lab{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.1em;width:44px}
+.srow select{font-family:var(--mono);font-size:11px;padding:6px 8px;background:#15161c;border:1px solid rgba(255,255,255,.18);border-radius:2px;color:#fff}
+.scount{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.55);padding-top:12px}
+.card .sz{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.55);margin-top:2px}
+.sempty{padding:40px 0;text-align:center;color:rgba(255,255,255,.55);line-height:2}
+.sempty button{font-family:var(--mono);font-size:11px;padding:7px 11px;border:1px solid rgba(255,255,255,.3);border-radius:2px;margin-top:8px}
+#panel .share{margin-top:14px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.6);text-decoration:underline}
+#panel .grab{display:none}
+@media (max-width:640px){ #panel .grab{display:block;position:absolute;top:6px;left:50%;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:rgba(255,255,255,.35);z-index:3} #backBtn{top:54px;left:10px} }
 #err{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:#05060a;padding:30px;text-align:center;line-height:1.8}
 </style>
 </head>
@@ -157,10 +187,11 @@ body.touch #hint{display:none}
 </div>
 <div id="tools" class="hud">
   <button class="btn" id="soundBtn">♪ OFF</button>
-  <button class="btn" id="listBtn">LIST</button>
+  <button class="btn" id="listBtn">⌕ さがす</button>
   <button class="btn" id="cartBtn">CART<b id="cartCount">0</b></button>
 </div>
 <div id="nav" class="hud"></div>
+<button id="backBtn" aria-label="売り場からもどる"><b>‹</b>もどる<span id="crumb"></span></button>
 <div id="hint" class="hud">WASD / ↑↓ 移動　←→ 振り向き　SHIFT 速歩き<br>ドラッグで見回す　床クリック→歩く　服クリック→ディグ（←→でめくる）</div>
 <div id="joy"><i></i></div>
 <canvas id="map" aria-label="ミニマップ"></canvas>
@@ -171,14 +202,15 @@ body.touch #hint{display:none}
     <div class="info"><div id="dZone"></div><div id="dTitle"></div><div id="dPrice"></div></div>
     <button class="arr" id="dNext" aria-label="次の服">›</button>
   </div>
-  <div class="acts"><button class="ghost" id="dOpen">詳細を見る</button><button class="cta" id="dAdd">カートへ</button></div>
+  <div class="dsz" id="dSizes"></div>
+  <div class="dmore"><button id="dOpen">詳細・写真を見る</button></div>
   <div class="foot"><span id="dHint">← → でめくる　ENTER 詳細</span><button id="dExit">↓ もどる</button></div>
 </div>
 <div id="tip"></div>
 <div id="toast"></div>
 
 <aside id="panel" aria-hidden="true">
-  <button class="close" id="panelClose" aria-label="閉じる">×</button>
+  <div class="grab"></div><button class="close" id="panelClose" aria-label="閉じる">×</button>
   <div class="img"><img id="pImg" alt=""><div class="sold">SOLD OUT</div><div class="dots" id="pDots"></div></div>
   <div class="body">
     <div class="slot" id="pSlot"></div>
@@ -186,6 +218,7 @@ body.touch #hint{display:none}
     <div class="price" id="pPrice"></div>
     <div class="sizeLbl">SIZE</div><div class="sizes" id="pSizes"></div>
     <p class="desc" id="pDesc"></p>
+    <button class="share" id="pShare">この商品のリンクをコピー</button>
   </div>
   <div class="acts">
     <button class="cta" id="pAdd">カートに入れる</button>
@@ -199,13 +232,22 @@ body.touch #hint{display:none}
   <footer>
     <div class="sum"><span>小計</span><span id="cartTotal">¥0</span></div>
     <a class="cta" id="checkout" href="#" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">レジに進む</a>
+    <button class="ghost" id="keepShop" style="width:100%;justify-content:center;margin-top:8px">買い物を続ける</button>
     <p class="note" id="cartNote"></p>
   </footer>
 </div></div>
 
 <div class="sheet" id="listSheet"><div class="in">
-  <header><h3>ALL ITEMS</h3><button data-close>×</button></header>
-  <div class="list"><div class="filter" id="filter"></div><div class="grid" id="grid"></div></div>
+  <header><h3>さがす</h3><button data-close aria-label="閉じる">×</button></header>
+  <div class="list">
+    <div class="sbar"><input id="sq" type="search" placeholder="商品名・色・種類（例：黒 パーカー）" enterkeyhint="search" autocomplete="off"></div>
+    <div class="srow"><span class="lab">種類</span><div class="filter" id="filter" style="padding:0"></div></div>
+    <div class="srow"><span class="lab">サイズ</span><div class="filter" id="sizeFilter" style="padding:0"></div></div>
+    <div class="srow"><span class="lab">表示</span><button class="btn on" id="stockOnly" style="padding:6px 9px;font-size:10px">在庫ありだけ</button>
+      <select id="sSort"><option value="new">新しい順</option><option value="price_asc">安い順</option><option value="price_desc">高い順</option></select></div>
+    <div class="scount" id="scount"></div>
+    <div class="grid" id="grid"></div>
+  </div>
 </div></div>
 
 <div id="intro"><div class="box">
@@ -736,14 +778,15 @@ const T = (() => {
   const method = m => { if (!used.has(m)){ used.add(m); ev('move_method', { props:{ m } }); } };
   return { ev, method, flush, sid };
 })();
-function addToCart(slot, vid){
+function addToCart(slot, vid, via='panel'){
   const it = state.items[slot]; if (!it) return;
   const v = it.variants.find(v => String(v.id) === String(vid));
   if (!v || !v.available){ toast('そのサイズは売り切れ'); return; }
   const line = state.cart.find(l => String(l.vid) === String(vid));
   if (line) line.qty = Math.min(line.qty + 1, 5); else state.cart.push({ vid:String(v.id), handle:it.handle, size:v.size, qty:1 });
-  saveCart(); renderCart(); toast(`カートに入れた：${it.title}（${v.size}）`); haptic(15);
-  T.ev('add_to_cart', { slot, handle:it.handle, zone:slot.split('-')[0], value:v.price, props:{ size:v.size } });
+  saveCart(); renderCart(); haptic(15);
+  toast(`カートに入れた：${it.title.replace(/^TYPE-\d+\s*/, '')}（${v.size}）`, [{ label:'カートを見る', fn:() => $('#cartBtn').click() }, { label:'レジへ', href:checkoutUrl(), pri:true, fn:() => $('#checkout').click() }]);
+  T.ev('add_to_cart', { slot, handle:it.handle, zone:slot.split('-')[0], value:v.price, props:{ size:v.size, via } });
 }
 function removeLine(vid){ const l = state.cart.find(l => l.vid === vid); if (l) T.ev('remove_from_cart', { handle:l.handle, props:{ size:l.size } }); state.cart = state.cart.filter(l => l.vid !== vid); saveCart(); renderCart(); }
 function saveCart(){ store.set('bkf_cart2', state.cart); }
@@ -800,39 +843,123 @@ function openPanel(slot){
   $('#pDesc').textContent = it.desc;
   const add = $('#pAdd'); add.disabled = !it.available; add.textContent = it.available ? 'カートに入れる' : 'SOLD OUT';
   const link = $('#pLink'); link.href = it.url; link.style.display = ''; link.onclick = () => T.ev('product_page_click', { handle:it.handle });
+  if (!p.classList.contains('open')) navOpen('panel');
   p.classList.add('open'); p.setAttribute('aria-hidden','false');
   T.ev('product_open', { slot, handle:it.handle, zone:slot.split('-')[0], props:{ available:it.available } });
   $('#dig').classList.remove('show'); $('#tip').style.display = 'none';
 }
 function closePanel(silent){ state.selected = null; $('#panel').classList.remove('open'); $('#panel').setAttribute('aria-hidden','true'); if (!silent && typeof renderDig === 'function') renderDig(); }
-$('#panelClose').onclick = () => closePanel();
+$('#panelClose').onclick = () => navClose('panel', () => closePanel());
+$('#pShare').onclick = async () => { const it = state.items[state.selected]; if (!it) return; const url = `${location.origin}/?item=${encodeURIComponent(it.handle)}`;
+  try { await navigator.clipboard.writeText(url); toast('リンクをコピーした'); } catch(e){ toast(url); } T.ev('share_copy', { handle:it.handle }); };
 $('#pAdd').onclick = () => { if (state.selected && pickedVid) addToCart(state.selected, pickedVid); };
 $('#pImg').onclick = () => { const it = state.items[state.selected]; if (!it || it.images.length < 2) return; T.ev('photo_next', { handle:it.handle }); const img = $('#pImg'); const n = (+img.dataset.idx + 1) % it.images.length; img.dataset.idx = n; setImg(img, it, 900, n); };
 $('#panel').addEventListener('pointerdown', e => e.stopPropagation());
+{ let sy = null, el = $('#panel');
+  el.addEventListener('touchstart', e => { const body = el.querySelector('.body'); sy = (innerWidth <= 640 && (!body.contains(e.target) || body.scrollTop <= 0)) ? e.touches[0].clientY : null; }, { passive:true });
+  el.addEventListener('touchmove', e => { if (sy === null) return; const dy = e.touches[0].clientY - sy; if (dy > 0) el.style.transform = `translateY(${dy}px)`; }, { passive:true });
+  el.addEventListener('touchend', e => { if (sy === null) return; const dy = e.changedTouches[0].clientY - sy; el.style.transform = ''; sy = null; if (dy > 90) navClose('panel', () => closePanel()); }); }
 
-/* ===== 一覧 ===== */
-let listFilter = 'ALL', stockOnly = false;
-function renderList(){
-  const zones = ['ALL', ...RACKS.map(r=>r.id), ...TABLES.map(t=>t.id)];
-  $('#filter').innerHTML = '';
-  zones.forEach(z => { const b = document.createElement('button'); b.className = 'btn' + (z===listFilter?' on':''); b.textContent = z==='ALL' ? 'ALL' : ([...RACKS,...TABLES].find(x=>x.id===z).label); b.onclick = () => { listFilter = z; renderList(); }; $('#filter').appendChild(b); });
-  const st = document.createElement('button'); st.className = 'btn' + (stockOnly ? ' on' : ''); st.textContent = '在庫ありのみ'; st.onclick = () => { stockOnly = !stockOnly; renderList(); }; $('#filter').appendChild(st);
-  const grid = $('#grid'); grid.innerHTML = '';
-  ALL_SLOTS.filter(s => state.items[s] && (listFilter==='ALL' || s.startsWith(listFilter + '-')) && (!stockOnly || state.items[s].available)).forEach(s => {
-    const it = state.items[s];
-    const c = document.createElement('button'); c.className = 'card' + (it.available?'':' sold');
-    c.innerHTML = `<img alt="" loading="lazy"><div class="z"></div><div class="n"></div><div class="p"></div>`;
-    setImg(c.querySelector('img'), it, 400); c.querySelector('.z').textContent = `${it.zone}　${s}`; c.querySelector('.n').textContent = it.title;
-    c.querySelector('.p').textContent = it.available ? yen(it.price) : 'SOLD OUT';
-    c.onclick = () => { T.ev('list_pick', { slot:s, handle:it.handle }); closeSheets(); enterDig(s); };
-    grid.appendChild(c);
-  });
+/* ===== 戻る（店内 → ラック → 詳細／シート の階層をブラウザの「戻る」とそろえる） ===== */
+const LEVEL = { dig:1, panel:2, sheet:2 };
+const navStack = []; let navSkip = 0;
+function navOpen(layer){
+  const top = navStack[navStack.length - 1];
+  try {
+    if (top && LEVEL[top] >= LEVEL[layer]){
+      if (navStack.length >= 2 && navStack[navStack.length - 2] === layer){ navStack.pop(); navSkip++; history.back(); return; } // 例：ラック→検索→別の服 は「ラック」1段にまとめる
+      navStack[navStack.length - 1] = layer; history.replaceState({ bk:layer }, '');
+    }
+    else { navStack.push(layer); history.pushState({ bk:layer }, ''); }
+  } catch(e){}
 }
-function openSheet(id){ closePanel(); $(id).classList.add('open'); }
-function closeSheets(){ document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); }
-document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s || e.target.hasAttribute('data-close')) closeSheets(); }));
+function navClose(layer, direct){ // 画面のボタンで閉じるときは、ブラウザの履歴も1つ戻す
+  if (navStack[navStack.length - 1] === layer){ T.ev('back', { props:{ via:'ui', layer } }); history.back(); } else direct();
+}
+function navReset(){ const n = navStack.length; if (n){ navStack.length = 0; navSkip++; history.go(-n); } }
+addEventListener('popstate', () => {
+  if (navSkip){ navSkip--; return; }
+  const layer = navStack.pop();
+  if (layer === 'sheet') closeSheets(true);
+  else if (layer === 'panel') closePanel();
+  else if (layer === 'dig') exitDig(true);
+  if (layer) T.ev('back', { props:{ via:'history', layer } });
+});
+
+/* ===== 検索 ===== */
+const KIND_LABEL = { jacket:'アウター', hoodie:'パーカー', long:'スウェット・ニット', pants:'パンツ', shorts:'ショーツ', tee:'Tシャツ', bag:'バッグ' };
+const KIND_WORDS = { jacket:'アウター ジャケット ジャンパー ブルゾン トラッカー ボンバー jacket outer', hoodie:'パーカー フーディ フーディー ジップ hoodie zip',
+  long:'スウェット トレーナー ニット セーター クルー 長袖 sweat knit crew', pants:'パンツ ズボン スウェットパンツ ボトム pants', shorts:'ショーツ ハーフパンツ 短パン ボトム shorts',
+  tee:'tシャツ ティー 半袖 カットソー tee', bag:'バッグ かばん 鞄 bag' };
+const COLOR_WORDS = { BLACK:'黒 ブラック くろ', WASHEDBLACK:'黒 ブラック', OBSIDIAN:'黒 ブラック', RED:'赤 レッド あか', NAVY:'紺 ネイビー', DARKNAVY:'紺 ネイビー', PINK:'ピンク', BEIGE:'ベージュ',
+  OFFWHITE:'白 オフホワイト ホワイト', WHITE:'白 ホワイト しろ', OLIVE:'オリーブ カーキ 緑', CHARCOAL:'チャコール グレー 灰', ASHGRAY:'グレー 灰 アッシュ', GRAY:'グレー 灰', BLUEGRAY:'グレー 青 ブルーグレー',
+  FADEDYELLOW:'黄 イエロー きいろ', YEL:'黄 イエロー', ORANGE:'オレンジ', DARKORANGE:'オレンジ', BURGUNDY:'ボルドー バーガンディ ワイン 赤', CAMO:'迷彩 カモ', GRAYKHAKI:'カーキ グレー', BROWN:'茶 ブラウン' };
+const SIZE_ORDER = ['XS','S','M','L','XL','XXL','FREE','REGULAR','LARGE','ONE SIZE'];
+const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60)).replace(/[・\-\/]/g, ' ');
+const SS = { q:'', kind:'', size:'', stock:true, sort:'new' };
+function hay(it){
+  if (it._hay) return it._hay;
+  const colors = it.title.toUpperCase().replace(/ASH GRAY/g, 'ASHGRAY').split(/[\s\-]+/).map(w => COLOR_WORDS[w] || '').join(' ');
+  return (it._hay = norm(`${it.title} ${KIND_WORDS[it.kind] || ''} ${colors} ${it.zone} ${it.desc}`));
+}
+function searchItems(){
+  const toks = norm(SS.q).split(/\s+/).filter(Boolean);
+  let list = ALL_SLOTS.map(s => state.items[s]).filter(Boolean).filter(it =>
+    (!SS.stock || it.available) &&
+    (!SS.kind || it.kind === SS.kind || (SS.kind === 'hoodie' && it.kind === 'long')) &&
+    (!SS.size || it.variants.some(v => v.size.toUpperCase() === SS.size && (!SS.stock || v.available))) &&
+    toks.every(t => hay(it).includes(t)));
+  if (SS.sort === 'price_asc') list.sort((a, b) => a.price - b.price);
+  else if (SS.sort === 'price_desc') list.sort((a, b) => b.price - a.price);
+  else list.sort((a, b) => (b.available - a.available) || b.date.localeCompare(a.date));
+  return list;
+}
+let searchLogT;
+function renderList(){
+  const kinds = [['', 'すべて'], ['jacket', 'アウター'], ['hoodie', 'パーカー・ニット'], ['pants', 'パンツ'], ['shorts', 'ショーツ'], ['tee', 'Tシャツ'], ['bag', 'バッグ']];
+  $('#filter').innerHTML = '';
+  kinds.forEach(([k, l]) => { const b = document.createElement('button'); b.className = 'btn' + (SS.kind === k ? ' on' : ''); b.style.cssText = 'padding:6px 9px;font-size:10px'; b.textContent = l; b.onclick = () => { SS.kind = k; renderList(); }; $('#filter').appendChild(b); });
+  const sizes = SIZE_ORDER.filter(sz => ALL_SLOTS.some(s => state.items[s] && state.items[s].variants.some(v => v.size.toUpperCase() === sz)));
+  $('#sizeFilter').innerHTML = '';
+  [['', 'すべて'], ...sizes.map(s => [s, s])].forEach(([k, l]) => { const b = document.createElement('button'); b.className = 'btn' + (SS.size === k ? ' on' : ''); b.style.cssText = 'padding:6px 9px;font-size:10px'; b.textContent = l; b.onclick = () => { SS.size = k; renderList(); }; $('#sizeFilter').appendChild(b); });
+  $('#stockOnly').classList.toggle('on', SS.stock);
+  const list = searchItems();
+  $('#scount').textContent = `${list.length}件${SS.stock ? '（在庫ありだけ）' : ''}`;
+  const grid = $('#grid'); grid.innerHTML = '';
+  if (!list.length){
+    grid.innerHTML = `<div class="sempty" style="grid-column:1/-1">見つからなかった。<br><button id="sReset">条件をリセット</button>${SS.stock ? '　<button id="sSold">売り切れも表示</button>' : ''}</div>`;
+    $('#sReset').onclick = () => { Object.assign(SS, { q:'', kind:'', size:'', stock:true }); $('#sq').value = ''; renderList(); };
+    if ($('#sSold')) $('#sSold').onclick = () => { SS.stock = false; renderList(); };
+  }
+  for (const it of list){
+    const c = document.createElement('button'); c.className = 'card' + (it.available ? '' : ' sold');
+    c.innerHTML = `<img alt="" loading="lazy"><div class="z"></div><div class="n"></div><div class="p"></div><div class="sz"></div>`;
+    setImg(c.querySelector('img'), it, 400); c.querySelector('.z').textContent = it.zone; c.querySelector('.n').textContent = it.title;
+    c.querySelector('.p').textContent = it.available ? yen(it.price) : 'SOLD OUT';
+    c.querySelector('.sz').textContent = it.available ? '在庫 ' + it.variants.filter(v => v.available).map(v => v.size).join(' / ') : '';
+    c.onclick = () => { T.ev('search_pick', { slot:it.slot, handle:it.handle, props:{ q:SS.q.slice(0, 60) } }); closeSheets(true); enterDig(it.slot, { open:true }); };
+    grid.appendChild(c);
+  }
+  clearTimeout(searchLogT);
+  if (SS.q.trim()) searchLogT = setTimeout(() => T.ev('search', { value:list.length, props:{ q:SS.q.trim().slice(0, 60), kind:SS.kind, size:SS.size, stock:SS.stock } }), 1200);
+}
+$('#sq').addEventListener('input', e => { SS.q = e.target.value; renderList(); });
+$('#sq').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+$('#stockOnly').onclick = () => { SS.stock = !SS.stock; renderList(); };
+$('#sSort').onchange = e => { SS.sort = e.target.value; renderList(); };
+
+/* ===== シート（カート・検索） ===== */
+function openSheet(id){
+  if ($('#panel').classList.contains('open')) closePanel(true);
+  document.querySelectorAll('.sheet').forEach(s => s.classList.toggle('open', '#' + s.id === id));
+  navOpen('sheet');
+}
+function closeSheets(fromNav){ document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); if (!fromNav) renderDig(); else renderDig(); }
+const uiCloseSheets = () => navClose('sheet', () => closeSheets());
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s || e.target.hasAttribute('data-close')) uiCloseSheets(); }));
+$('#keepShop').onclick = uiCloseSheets;
 $('#cartBtn').onclick = () => { renderCart(); openSheet('#cartSheet'); T.ev('cart_open', { value:state.cart.length }); };
-$('#listBtn').onclick = () => { renderList(); openSheet('#listSheet'); T.ev('list_open'); };
+$('#listBtn').onclick = () => { renderList(); openSheet('#listSheet'); T.ev('list_open'); if (!IS_TOUCH) setTimeout(() => $('#sq').focus(), 50); };
 
 
 /* ===== 移動・視点（ゲーム的な操作） ===== */
@@ -857,19 +984,20 @@ function flyTo(x, z, yaw, pitch, onDone, dur=1.1){
 function haptic(ms=8){ try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
 
 /* --- ディグモード：ラックの前で1着ずつめくる --- */
-function enterDig(slot){
+function enterDig(slot, opt = {}){
   const zone = slot.split('-')[0];
   const list = zoneSlots(zone); if (!list.length) return;
   state.dig = { zone, list, idx: Math.max(0, list.indexOf(slot)) };
   state.hovered = null; closePanel(true);
-  document.body.classList.add('digging');
+  document.body.classList.add('digging'); navOpen('dig');
+  $('#crumb').textContent = ZONES.find(z => z.id === zone).label.replace(/^\d+ — /, '');
   T.ev('dig_enter', { zone, slot, handle:state.items[slot] && state.items[slot].handle });
-  focusDig(1.0); haptic(12); hideCoach();
+  focusDig(1.0, opt.open ? () => openPanel(slot) : null); haptic(12); hideCoach();
 }
-function focusDig(dur){
+function focusDig(dur, onDone){
   const d = state.dig, slot = d.list[d.idx], v = viewFor(slot);
   T.ev('dig_view', { zone:d.zone, slot, handle:state.items[slot].handle, props:{ available:state.items[slot].available, idx:d.idx } });
-  flyTo(v.x, v.z, v.yaw, v.pitch, null, dur);
+  flyTo(v.x, v.z, v.yaw, v.pitch, onDone || null, dur);
   renderDig();
 }
 function flip(dir){
@@ -878,7 +1006,7 @@ function flip(dir){
   if (n < 0 || n >= d.list.length){ const c = $('#dig'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); haptic(25); return; }
   d.idx = n; focusDig(.38); tick(); haptic();
 }
-function exitDig(){
+function exitDig(fromNav){
   if (!state.dig) return;
   T.ev('dig_exit', { zone:state.dig.zone });
   state.dig = null; document.body.classList.remove('digging'); closePanel(true); renderDig();
@@ -891,22 +1019,31 @@ function renderDig(){
   const slot = digSlot(), it = state.items[slot], z = ZONES.find(z => z.id === d.zone);
   $('#dZone').textContent = `${z.label}　${d.idx+1} / ${d.list.length}`;
   $('#dTitle').textContent = it.title;
-  const av = it.variants.filter(v => v.available);
-  $('#dPrice').textContent = it.available ? `${yen(it.price)}　在庫 ${av.map(v => v.size).join(' / ')}` : 'SOLD OUT';
-  $('#dAdd').disabled = !it.available;
-  $('#dAdd').textContent = !it.available ? 'SOLD' : av.length > 1 ? 'サイズを選ぶ' : 'カートへ';
+  $('#dPrice').textContent = it.available ? `${yen(it.price)}（税込）` : 'SOLD OUT';
+  const box = $('#dSizes'); box.innerHTML = '';
+  if (it.available){
+    const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = 'サイズをタップでカートへ'; box.appendChild(lbl);
+    for (const v of it.variants){
+      const b = document.createElement('button'); const inCart = state.cart.some(l => l.vid === String(v.id));
+      b.textContent = (inCart ? '✓ ' : '') + v.size; b.disabled = !v.available; if (inCart) b.classList.add('in');
+      b.title = v.available ? `${v.size}をカートに入れる` : '売り切れ';
+      b.onclick = () => { addToCart(slot, v.id, 'dig'); renderDig(); };
+      box.appendChild(b);
+    }
+  } else { const s2 = document.createElement('div'); s2.className = 'soldout'; s2.textContent = 'このアイテムは売り切れ。詳細から商品ページは見られるよ'; box.appendChild(s2); }
   $('#dPrev').disabled = d.idx === 0; $('#dNext').disabled = d.idx === d.list.length - 1;
   el.classList.toggle('show', !$('#panel').classList.contains('open'));
 }
 $('#dPrev').onclick = () => flip(-1);
 $('#dNext').onclick = () => flip(1);
 $('#dOpen').onclick = () => { const s = digSlot(); if (s) openPanel(s); };
-$('#dAdd').onclick = () => { const s = digSlot(); if (!s) return; const av = state.items[s].variants.filter(v => v.available); if (av.length === 1) addToCart(s, av[0].id); else openPanel(s); };
-$('#dExit').onclick = exitDig;
+const uiExitDig = () => navClose('dig', () => exitDig());
+$('#dExit').onclick = uiExitDig;
+$('#backBtn').onclick = () => { if ($('#panel').classList.contains('open')) navClose('panel', () => closePanel()); else uiExitDig(); };
 
 /* --- 売り場ナビ --- */
 const NAV = [
-  { k:'IN', label:'入口', go:() => { if (state.dig){ state.dig = null; document.body.classList.remove('digging'); renderDig(); } flyTo(-1.6, 13.8, .14, -.02); } },
+  { k:'IN', label:'入口', go:() => { navReset(); if (state.dig){ state.dig = null; document.body.classList.remove('digging'); renderDig(); } flyTo(-1.6, 13.8, .14, -.02); } },
   ...ZONES.map(z => ({ k:z.id, label:z.label.replace(/^\d+ — /,''), go:() => { const l = zoneSlots(z.id); if (l.length) enterDig(l[0]); } })),
 ];
 NAV.forEach(n => { const b = document.createElement('button'); b.className = 'btn'; b.innerHTML = `<small>${n.k}</small>`; b.append(n.label); b.onclick = () => { closePanel(); T.ev('nav', { zone:n.k }); T.method('nav'); n.go(); }; $('#nav').appendChild(b); });
@@ -914,14 +1051,16 @@ NAV.forEach(n => { const b = document.createElement('button'); b.className = 'bt
 /* --- キーボード --- */
 const keys = {};
 addEventListener('keydown', e => {
+  if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){ if (e.code === 'Escape') e.target.blur(); return; }
   keys[e.code] = true;
   if (!state.started) return;
-  if (e.code === 'Escape'){ if ($('#panel').classList.contains('open')) closePanel(); else if (document.querySelector('.sheet.open')) closeSheets(); else exitDig(); }
+  if (e.code === 'Escape'){ if (document.querySelector('.sheet.open')) uiCloseSheets(); else if ($('#panel').classList.contains('open')) navClose('panel', () => closePanel()); else if (state.dig) uiExitDig(); }
+  if (e.key === '/'){ e.preventDefault(); $('#listBtn').click(); return; }
   if (state.dig && !$('#panel').classList.contains('open')){
     if (e.code === 'ArrowRight' || e.code === 'KeyD') flip(1);
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') flip(-1);
     if (e.code === 'Enter' || e.code === 'Space'){ e.preventDefault(); openPanel(digSlot()); }
-    if (e.code === 'ArrowDown' || e.code === 'KeyS') exitDig();
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') uiExitDig();
   }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1091,7 +1230,7 @@ function endPtr(e, cancelled){
   if (cancelled) return;
   if (state.dig){
     if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.2) flip(dx < 0 ? 1 : -1);
-    else if (dy > 70 && dy > Math.abs(dx) * 1.3) exitDig();
+    else if (dy > 70 && dy > Math.abs(dx) * 1.3) uiExitDig();
     else if (tap) handleTap(e.clientX, e.clientY);
     return;
   }
@@ -1144,7 +1283,7 @@ mapC.addEventListener('click', e => {
   for (const zn of ZONES){ const d = Math.abs(zn.z - z) / (zn.d/2 + .4) + Math.abs(zn.x - x) / 1.4; if (d < bd){ bd = d; best = zn; } }
   closePanel();
   if (best && Math.abs(best.z - z) < best.d/2 + .4){ const l = zoneSlots(best.id); if (l.length){ enterDig(l[0]); return; } }
-  if (state.dig){ state.dig = null; document.body.classList.remove('digging'); renderDig(); }
+  if (state.dig){ navReset(); state.dig = null; document.body.classList.remove('digging'); renderDig(); }
   walkTo(x, z, 'map');
 });
 
@@ -1257,7 +1396,16 @@ addEventListener('resize', () => {
 });
 
 let toastT;
-function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
+function toast(msg, acts){
+  const t = $('#toast'); t.innerHTML = ''; const m = document.createElement('span'); m.textContent = msg; t.appendChild(m);
+  t.classList.toggle('act', !!acts);
+  if (acts){ const box = document.createElement('div'); box.className = 'ta';
+    for (const a of acts){ const el = document.createElement(a.href ? 'a' : 'button'); el.textContent = a.label; if (a.pri) el.className = 'pri';
+      if (a.href){ el.href = a.href; el.target = '_blank'; el.rel = 'noopener'; el.onclick = () => { if (a.fn) T.ev('checkout_click', { value:state.cart.reduce((s, l) => { const it = byHandle(l.handle); const v = it && it.variants.find(v => String(v.id) === l.vid); return s + (v ? v.price : 0) * l.qty; }, 0), props:{ items:state.cart.length, via:'toast' } }); T.flush(true); }; }
+      else el.onclick = () => { t.classList.remove('show'); a.fn(); };
+      box.appendChild(el); } t.appendChild(box); }
+  t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), acts ? 4500 : 2200);
+}
 
 /* ===== 起動 ===== */
 (async function main(){
@@ -1282,6 +1430,13 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
     if (!zone){ let best = 1.2; for (const zn of ZONES){ const d = Math.max(Math.abs(p.z - zn.z) - zn.d/2, 0) + Math.max(Math.abs(p.x - zn.x) - zn.w/2, 0) * .5; if (d < best){ best = d; zone = zn.id; } } }
     T.ev('pos', { x:Math.round(p.x*10)/10, z:Math.round(p.z*10)/10, zone:zone || 'AISLE', props:{ dig:!!state.dig, panel:!!state.selected } });
   }, 5000);
+  const dl = new URLSearchParams(location.search), dlItem = dl.get('item'), dlZone = (dl.get('zone') || '').toUpperCase();
+  const dlSlot = dlItem ? (byHandle(dlItem) || {}).slot : (ZONES.some(z => z.id === dlZone) ? zoneSlots(dlZone)[0] : null);
+  if (dlSlot){ // 広告などから商品へ直接着地：イントロを飛ばして、その服の前まで連れていく
+    state.started = true; $('#intro').classList.add('hide'); cvs.style.cursor = 'grab';
+    T.ev('deeplink', { slot:dlSlot, handle:state.items[dlSlot].handle, props:{ zone:dlZone || null } }); T.ev('enter', { value:0, props:{ deeplink:true } });
+    setTimeout(() => enterDig(dlSlot, { open:!!dlItem }), 300);
+  }
   enter.onclick = () => { T.ev('enter', { value:Math.round((performance.now() - loadedAt)/100)/10 }); state.started = true; $('#intro').classList.add('hide'); cvs.style.cursor = 'grab'; setTimeout(() => toast('ようこそ、終電後のBONKNOW FREAKS駅へ'), 500); showCoach(); };
   frame();
 })().catch(e => { console.error(e); $('#err').style.display = 'flex'; $('#err').textContent = '読み込みに失敗しました：' + e.message; });

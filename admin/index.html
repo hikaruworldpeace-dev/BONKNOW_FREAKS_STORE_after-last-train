@@ -220,6 +220,14 @@ table.t tr.click:hover td{background:var(--surface-2)}
         <h3>SOLD商品への関心 <small>再販・再生産の判断材料（詳細を開いた人数）</small></h3>
         <div class="chart" id="soldInterest"></div>
       </div>
+      <div class="card c6">
+        <h3>検索ワード <small>多い順。0件だったワードは品ぞろえ・表記のヒント</small></h3>
+        <div class="scroll" style="max-height:320px"><table class="t" id="searchTable"></table></div>
+      </div>
+      <div class="card c6">
+        <h3>買い方 <small>カートに入れた場所・戻る操作</small></h3>
+        <div class="chart" id="buyWays"></div>
+      </div>
       <div class="card c12">
         <h3>商品別 <small>めくった → 詳細 → カート → レジ。列名クリックで並べ替え</small></h3>
         <div class="scroll" style="max-height:560px"><table class="t" id="itemsTable"></table></div>
@@ -343,7 +351,7 @@ function demoEvents(){
           if (R() < (c.available ? .38 : .26)){
             tt += 1500; push(sid, vid, tt, 'product_open', { zone, handle:h, props:{ available:c.available } });
             if (R() < .5) push(sid, vid, tt + 2000, 'photo_next', { handle:h });
-            if (c.available && R() < .28){ tt += 6000; push(sid, vid, tt, 'size_select', { handle:h, props:{ size:'M' } }); push(sid, vid, tt + 800, 'add_to_cart', { zone, handle:h, value:c.price, props:{ size:'M' } }); cart.push(h); }
+            if (c.available && R() < .28){ tt += 6000; push(sid, vid, tt, 'size_select', { handle:h, props:{ size:'M' } }); push(sid, vid, tt + 800, 'add_to_cart', { zone, handle:h, value:c.price, props:{ size:'M', via:R() < .6 ? 'dig' : 'panel' } }); cart.push(h); }
             if (R() < .06) push(sid, vid, tt + 1000, 'product_page_click', { handle:h });
           }
           for (let w = 0; w < 1 + Math.floor(R() * 2); w++) push(sid, vid, tt += HB * 1000, 'pos', { x:Math.round((px + (R()-.5)*.3)*10)/10, z:Math.round((pz + (R()-.5)*.6)*10)/10, zone, props:{ dig:true } });
@@ -353,6 +361,9 @@ function demoEvents(){
       zi = (zi + 1) % zs.length; if (zi === 0 && R() < .5) break;
     }
     if (R() < .12) push(sid, vid, t + 20000, 'list_open');
+    if (R() < .22){ const q = pickW([['パーカー', 5], ['黒', 4], ['ショーツ', 3], ['tee', 2], ['ボンバー', 2], ['デニム', 2], ['キャップ', 1], ['ニット', 2]]); const n = /デニム|キャップ/.test(q) ? 0 : 1 + Math.floor(R() * 8);
+      push(sid, vid, t + 15000, 'search', { value:n, props:{ q } }); if (n && R() < .6) push(sid, vid, t + 18000, 'search_pick', { props:{ q } }); }
+    if (R() < .4) push(sid, vid, t + 30000, 'back', { props:{ via:R() < .55 ? 'ui' : 'history', layer:'dig' } });
     if (cart.length){ push(sid, vid, tt + 3000, 'cart_open', { value:cart.length });
       if (R() < .5){ const v = cart.reduce((a, h) => a + ((CATALOG[h] || {}).price || 0), 0); push(sid, vid, tt + 9000, 'checkout_click', { value:v, props:{ items:cart.length, handles:cart } }); } }
     if (!live) push(sid, vid, Math.max(tt, end) + 1000, 'session_end');
@@ -538,7 +549,8 @@ function renderPlay(F){
 }
 const EV_LABEL = { session_start:'来訪', enter:'入店', move_method:'移動方法', nav:'売り場ボタン', dig_enter:'ディグ開始', dig_view:'めくった', dig_exit:'ディグ終了', product_open:'詳細を開いた',
   size_select:'サイズ選択', photo_next:'写真を切り替え', product_page_click:'商品ページへ', add_to_cart:'カートに入れた', remove_from_cart:'カートから削除', cart_open:'カートを開いた',
-  checkout_click:'レジへ進んだ', list_open:'一覧を開いた', list_pick:'一覧から選んだ', sound:'サウンド', session_end:'離脱' };
+  checkout_click:'レジへ進んだ', list_open:'検索を開いた', list_pick:'一覧から選んだ', sound:'サウンド', session_end:'離脱',
+  search:'検索した', search_pick:'検索結果から選んだ', back:'戻った', share_copy:'リンクをコピー', deeplink:'直リンクで着地' };
 function showTimeline(s){
   st.player = s.sid;
   $('#tlTitle').innerHTML = `行動ログ <small>${esc(jstTime(s.start))}・${s.device === 'mobile' ? 'スマホ' : 'PC'}・${esc(s.source)}</small>`;
@@ -547,7 +559,7 @@ function showTimeline(s){
   $('#timeline').innerHTML = evs.map(e => { const dt = (new Date(e.ts) - t0) / 1000; const it = e.handle && CATALOG[e.handle];
     let d = it ? it.title : (e.zone ? ZLABEL[e.zone] || e.zone : '');
     if (e.type === 'move_method') d = MOVE_LABEL[e.props && e.props.m] || ''; if (e.type === 'session_start') d = `${s.source}${s.campaign ? ' / ' + s.campaign : ''}`;
-    if (e.type === 'add_to_cart' || e.type === 'checkout_click') d += `　${yen(e.value || 0)}`; if (e.type === 'sound') d = +e.value ? 'ON' : 'OFF';
+    if (e.type === 'add_to_cart' || e.type === 'checkout_click') d += `　${yen(e.value || 0)}`; if (e.type === 'search') d = `「${(e.props && e.props.q) || ''}」→ ${e.value ?? 0}件`; if (e.type === 'sound') d = +e.value ? 'ON' : 'OFF';
     return `<div><span>+${fdur(dt)}</span><span>${EV_LABEL[e.type] || e.type}</span><span>${esc(d)}</span></div>`; }).join('') + `<div><span></span><span>現在地の記録</span><span>${posN}回（約${fdur(posN * HB)}分の動線）</span></div>`;
 }
 function funnelSteps(ses){
@@ -607,6 +619,23 @@ function renderItems(F){
   const zv = {}; for (const r of rows) zv[r.zone] = (zv[r.zone] || 0) + r.views;
   barsH($('#zoneViews'), ZONES.map(z => ({ label:z.label, value:zv[ZLABEL[z.id]] || 0, tip:`${fnum(zv[ZLABEL[z.id]] || 0)}回めくられた` })), { color:S[0] });
   barsH($('#soldInterest'), rows.filter(r => !r.available).sort((a, b) => b.opens - a.opens).slice(0, 10).map(r => ({ label:r.name.replace(/^TYPE-\d+\s*/, ''), value:r.opens, tip:`${esc(r.name)}<br>詳細 ${r.opens}人・めくった ${r.viewers}人` })), { color:S[1] });
+  // 検索ワード
+  const sw = {}; for (const e of events){ if (e.type !== 'search' || !e.props || !e.props.q) continue; const q = String(e.props.q).trim().toLowerCase(); const r = sw[q] ||= { q, n:0, zero:0, res:0, picks:0 }; r.n++; r.res += +e.value || 0; if (!+e.value) r.zero++; }
+  for (const e of events){ if (e.type === 'search_pick' && e.props && e.props.q){ const r = sw[String(e.props.q).trim().toLowerCase()]; if (r) r.picks++; } }
+  table($('#searchTable'), 'search', [ { k:'q', l:'ワード', cls:'name' }, { k:'n', l:'回数', f:fnum }, { k:'avg', l:'平均件数', f:v => v.toFixed(1) },
+    { k:'zero', l:'0件', f:v => v ? `<span class="pill sold">${v}</span>` : '' }, { k:'picks', l:'結果から選んだ', f:fnum } ],
+    Object.values(sw).map(r => ({ ...r, avg:r.res / r.n })), { defaultSort:{ k:'n', dir:-1 } });
+  // 買い方
+  const via = {}; let adds = 0; for (const e of events) if (e.type === 'add_to_cart'){ adds++; const v = (e.props && e.props.via) || 'panel'; via[v] = (via[v] || 0) + 1; }
+  const backs = events.filter(e => e.type === 'back'), backUi = backs.filter(e => e.props && e.props.via === 'ui').length;
+  const deep = new Set(events.filter(e => e.type === 'deeplink').map(e => e.session_id)).size;
+  barsH($('#buyWays'), [
+    { label:'ラックで1タップ', value:pct(via.dig || 0, adds), tip:`${via.dig || 0}点（カート投入のうち）` },
+    { label:'詳細画面から', value:pct(via.panel || 0, adds), tip:`${via.panel || 0}点` },
+    { label:'戻る：画面のボタン', value:pct(backUi, backs.length), tip:`${backUi}回` },
+    { label:'戻る：ブラウザ/スワイプ', value:pct(backs.length - backUi, backs.length), tip:`${backs.length - backUi}回` },
+  ], { fmt:fp, max:100, color:S[2] });
+  $('#buyWays').insertAdjacentHTML('beforeend', `<div class="note" style="margin-top:8px">直リンク（?item=）で着地した来訪：${fnum(deep)}回</div>`);
   table($('#itemsTable'), 'items', [
     { k:'name', l:'商品', cls:'name', f:(v, r) => `<a href="https://bonknowfreaks.com/products/${encodeURIComponent(r.h)}" target="_blank" rel="noopener" style="color:inherit">${esc(v)}</a>` },
     { k:'zone', l:'売り場' }, { k:'available', l:'在庫', f:v => v ? '<span class="pill ok">あり</span>' : '<span class="pill sold">SOLD</span>' }, { k:'price', l:'価格', f:yen },
