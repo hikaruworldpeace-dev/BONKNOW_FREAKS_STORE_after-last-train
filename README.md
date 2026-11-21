@@ -28,3 +28,10 @@ Vercel に静的サイトとしてデプロイ（main に push すると自動�
 - `supabase/schema.sql` … 計測データの保存先（Supabase）の設計図
 - 店のページの `CONFIG.analytics` と、`admin/index.html` の `SUPABASE_URL` / `SUPABASE_KEY` に同じ値を入れると計測が始まる
 - 計測イベント：来訪（UTM・参照元・端末）、入店、5秒ごとの現在地、移動方法、ディグ、詳細、サイズ、カート、レジ、一覧、サウンド
+
+## Blenderで作った駅（assets/station_baked.glb）
+- 駅の空間（壁・床・線路・トンネル・出口・ラック・テーブル・サイン）は Blender で作り、光と影を焼き込んで書き出したもの
+- 服・ラックの売り場名・発車標・ヘッドライトは Web 側で描画（商品データと連動するため）
+- ハンガーは GLB 内の `ASSET_Hanger` を服ごとに複製して使う
+- 読み込めなかったときは Web だけで作った駅で表示する
+- Blender の元データ：`DEPT_POD_Movie/web_export/bonknow_station_web.blend`（コレクション WEB_Station を編集 → WEB_Bake で焼き込み → 書き出し）

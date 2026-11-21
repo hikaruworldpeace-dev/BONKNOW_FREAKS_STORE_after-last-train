@@ -270,6 +270,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 /* =====================================================================
    CONFIG — Shopify につなぐときはここを埋めるだけ
@@ -551,34 +553,35 @@ function build(){
   };
   M.floor.map.repeat.set(1.9, 15); M.floor.map.needsUpdate = true;
   const add = (geo, mat, x=0, y=0, z=0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); scene.add(m); return m; };
+  const envAdd = (...a) => { const m = add(...a); ENV.push(m); return m; }; // Blenderの駅が読み込めたら外すパーツ
 
   // トンネル本体（半径3.3m・中心高1.0m・全長30m）
-  add(arcSurface(3.3, 0, 360, -15, 15, 128), M.cream);
+  envAdd(arcSurface(3.3, 0, 360, -15, 15, 128), M.cream);
   // 紺タイルの壁（ホーム側）
-  add(arcSurface(3.27, 148, 215, -15, 15, 40), M.navy);
+  envAdd(arcSurface(3.27, 148, 215, -15, 15, 40), M.navy);
   // クリーム色の帯
-  for (const a of [142.2, 152.6, 201]) add(arcSurface(3.24, a-.8, a+.8, -15, 15, 4), M.stripe);
+  for (const a of [142.2, 152.6, 201]) envAdd(arcSurface(3.24, a-.8, a+.8, -15, 15, 4), M.stripe);
   // 紺のリブ（2本1組×6）
-  for (const z of [12.9,12.48,8.4,7.98,3.9,3.48,-.6,-1.02,-5.1,-5.52,-9.6,-10.02]) add(arcSurface(3.235, -12, 150, z-.1, z+.1, 64), M.navy);
+  for (const z of [12.9,12.48,8.4,7.98,3.9,3.48,-.6,-1.02,-5.1,-5.52,-9.6,-10.02]) envAdd(arcSurface(3.235, -12, 150, z-.1, z+.1, 64), M.navy);
   // 天井の光のライン
-  add(new THREE.BoxGeometry(.14,.06,30), M.glow, 0, 4.21, 0);
+  envAdd(new THREE.BoxGeometry(.14,.06,30), M.glow, 0, 4.21, 0);
   // ホーム
-  add(new THREE.BoxGeometry(3.85, 1, 30), M.floor, -1.375, -.5, 0);
-  add(new THREE.BoxGeometry(.35, .03, 30), M.coping, .425, .0, 0);
-  add(new THREE.BoxGeometry(.1, .004, 30), new THREE.MeshStandardMaterial({ color:0xe8c22a, roughness:.6 }), .1, .003, 0);
+  envAdd(new THREE.BoxGeometry(3.85, 1, 30), M.floor, -1.375, -.5, 0);
+  envAdd(new THREE.BoxGeometry(.35, .03, 30), M.coping, .425, .0, 0);
+  envAdd(new THREE.BoxGeometry(.1, .004, 30), new THREE.MeshStandardMaterial({ color:0xe8c22a, roughness:.6 }), .1, .003, 0);
   const mtg = labelTex(1024, 48, (g,w,h)=>{ g.clearRect(0,0,w,h); g.fillStyle='rgba(245,242,232,.85)'; g.font='700 30px "Archivo Black", sans-serif'; g.textBaseline='middle'; g.fillText('MIND THE GAP', 40, h/2+2); });
   mtg.wrapS = THREE.RepeatWrapping; mtg.repeat.set(10, 1);
   const mtgGeo = new THREE.PlaneGeometry(30, .22).rotateX(-Math.PI/2).rotateY(-Math.PI/2);
-  add(mtgGeo, new THREE.MeshBasicMaterial({ map:mtg, transparent:true, depthWrite:false, color:0xbdbab2 }), -.05, .004, 0);
+  envAdd(mtgGeo, new THREE.MeshBasicMaterial({ map:mtg, transparent:true, depthWrite:false, color:0xbdbab2 }), -.05, .004, 0);
   // 線路（奥のトンネルまで続く）
-  add(new THREE.BoxGeometry(2.75, .25, 60), M.ballast, 1.925, -1.125, -15);
-  for (const x of [1.18, 2.62]) add(new THREE.BoxGeometry(.07,.13,60), M.rail, x, -.885, -15);
-  add(new THREE.BoxGeometry(.08,.08,60), M.rail, 1.92, -.88, -15);
-  add(new THREE.BoxGeometry(.08,.08,60), M.rail, 3.04, -.81, -15);
+  envAdd(new THREE.BoxGeometry(2.75, .25, 60), M.ballast, 1.925, -1.125, -15);
+  for (const x of [1.18, 2.62]) envAdd(new THREE.BoxGeometry(.07,.13,60), M.rail, x, -.885, -15);
+  envAdd(new THREE.BoxGeometry(.08,.08,60), M.rail, 1.92, -.88, -15);
+  envAdd(new THREE.BoxGeometry(.08,.08,60), M.rail, 3.04, -.81, -15);
   const sleepers = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9,.05,.24), M.sleeper, 80);
   const tmp = new THREE.Object3D();
   for (let i=0;i<80;i++){ tmp.position.set(1.9, -.975, 14.7 - i*.75); tmp.updateMatrix(); sleepers.setMatrixAt(i, tmp.matrix); }
-  scene.add(sleepers);
+  scene.add(sleepers); ENV.push(sleepers);
   // 足元のLED（テクノのラッピング）
   const ledMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(0x00e5ff).multiplyScalar(1.6), toneMapped:false });
   add(new THREE.BoxGeometry(.025,.012,30), ledMat, -3.0, .008, 0);
@@ -586,14 +589,14 @@ function build(){
 
   // 端の壁：手前は閉じて、奥はトンネルの口
   const cap = new THREE.Shape(); cap.absarc(0, 1, 3.3, 0, Math.PI*2, false);
-  const near = add(new THREE.ShapeGeometry(cap, 64).rotateY(Math.PI), M.cream, 0, 0, 15);
+  const near = envAdd(new THREE.ShapeGeometry(cap, 64).rotateY(Math.PI), M.cream, 0, 0, 15);
   const farShape = new THREE.Shape(); farShape.absarc(0, 1, 3.3, 0, Math.PI*2, false);
   const hole = new THREE.Path(); hole.absarc(1.9, .55, 1.75, 0, Math.PI*2, true); farShape.holes.push(hole);
-  add(new THREE.ShapeGeometry(farShape, 64), M.cream, 0, 0, -15);
+  envAdd(new THREE.ShapeGeometry(farShape, 64), M.cream, 0, 0, -15);
   // 奥の暗いトンネル
-  add(arcSurface(1.75, 0, 360, -48, -15, 48, 1.9, .55), M.dark);
-  for (let z=-18; z>-48; z-=3) add(arcSurface(1.72, 0, 360, z-.08, z+.08, 32, 1.9, .55), M.steel);
-  add(new THREE.CircleGeometry(1.8, 32), M.black, 1.9, .55, -47.9);
+  envAdd(arcSurface(1.75, 0, 360, -48, -15, 48, 1.9, .55), M.dark);
+  for (let z=-18; z>-48; z-=3) envAdd(arcSurface(1.72, 0, 360, z-.08, z+.08, 32, 1.9, .55), M.steel);
+  envAdd(new THREE.CircleGeometry(1.8, 32), M.black, 1.9, .55, -47.9);
   // 信号
   const sig = add(new THREE.SphereGeometry(.05, 12, 8), new THREE.MeshBasicMaterial({ color:new THREE.Color(1,.05,.04).multiplyScalar(4), toneMapped:false }), 3.25, 1.25, -24);
   const sigL = new THREE.PointLight(0xff2010, 1.2, 6, 2); sigL.position.copy(sig.position); scene.add(sigL);
@@ -618,7 +621,7 @@ function build(){
   const roundel = (x,y,z) => { const g = new THREE.Group();
     const ring = new THREE.Mesh(ringGeo, M.red); const disc = new THREE.Mesh(discGeo, M.white); disc.position.z=-.004;
     const bar = new THREE.Mesh(barGeo, barMat); bar.position.z = .006; g.add(disc, ring, bar);
-    g.position.set(x,y,z); scene.add(g); g.lookAt(0, 1, z); };
+    g.position.set(x,y,z); scene.add(g); ENV.push(g); g.lookAt(0, 1, z); };
   [10,1,-8].forEach(z => roundel(-2.95, 2.3, z));
   [6,-3,-11].forEach(z => roundel(3.13, 1.7, z));
 
@@ -642,12 +645,12 @@ function build(){
     g.fillStyle='#00e5ff'; g.font='700 30px "Space Mono", monospace'; g.fillText('DIG  /  SAMPLE  /  REBUILD', w/2, 920);
     g.fillStyle='rgba(242,239,230,.8)'; g.font='700 40px "Noto Sans JP", sans-serif'; g.fillText('離れてても、お店で買おう。', w/2, 1010);
   });
-  add(new THREE.PlaneGeometry(1.5, 2.06).rotateY(Math.PI), new THREE.MeshStandardMaterial({ map:posterTex, roughness:.5 }), -1.5, 1.55, 14.97);
+  envAdd(new THREE.PlaneGeometry(1.5, 2.06).rotateY(Math.PI), new THREE.MeshStandardMaterial({ map:posterTex, roughness:.5 }), -1.5, 1.55, 14.97);
 
   // 接地影（安価なフェイク）
   const shadowTex = labelTex(128,128,(g,w,h)=>{ const gr=g.createRadialGradient(w/2,h/2,4,w/2,h/2,w/2); gr.addColorStop(0,'rgba(0,0,0,.55)'); gr.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gr; g.fillRect(0,0,w,h); });
   const shadowMat = new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, depthWrite:false });
-  const shadow = (w,d,x,z) => add(new THREE.PlaneGeometry(w,d).rotateX(-Math.PI/2), shadowMat, x, .006, z);
+  const shadow = (w,d,x,z) => envAdd(new THREE.PlaneGeometry(w,d).rotateX(-Math.PI/2), shadowMat, x, .006, z);
 
   // 服の共通ジオメトリ
   const garmentGeo = {};
@@ -660,8 +663,8 @@ function build(){
   const postGeo = new THREE.CylinderGeometry(.015,.015,1.55,10), barGeo2 = new THREE.CylinderGeometry(.015,.015,3,10).rotateX(Math.PI/2);
   const footGeo = new THREE.BoxGeometry(.35,.02,.04), rodGeo = new THREE.CylinderGeometry(.008,.008,.3,6);
   RACKS.forEach((r, ri) => {
-    add(barGeo2, M.steel, -2.55, 1.55, r.z);
-    for (const dz of [-1.5,1.5]){ add(postGeo, M.steel, -2.55, .775, r.z+dz); add(footGeo, M.steel, -2.55, .01, r.z+dz); add(rodGeo, M.steel, -2.55, 1.7, r.z+dz); }
+    envAdd(barGeo2, M.steel, -2.55, 1.55, r.z);
+    for (const dz of [-1.5,1.5]){ envAdd(postGeo, M.steel, -2.55, .775, r.z+dz); envAdd(footGeo, M.steel, -2.55, .01, r.z+dz); add(rodGeo, M.steel, -2.55, 1.7, r.z+dz); }
     shadow(.9, 3.4, -2.55, r.z);
     const head = labelTex(1024, 56, (g,w,h)=>{ g.fillStyle='#0a0b10'; g.fillRect(0,0,w,h); g.fillStyle='#f2efe6'; g.font='34px "Archivo Black", sans-serif'; g.textBaseline='middle'; g.fillText(r.label, 22, h/2+2); g.fillStyle='#00e5ff'; g.font='700 20px "Space Mono", monospace'; g.textAlign='right'; g.fillText('BONKNOW FREAKS LINE', w-22, h/2+1); });
     const hm = add(new THREE.PlaneGeometry(3.02,.165).rotateY(Math.PI/2), new THREE.MeshBasicMaterial({ map:head, color:0xbfbfbf, toneMapped:false }), -2.54, 1.82, r.z);
@@ -676,6 +679,7 @@ function build(){
       const hook = new THREE.Mesh(hookGeo, M.steel); hook.position.set(-.012, .05, 0); hook.rotation.z = -.2;
       const stem = new THREE.Mesh(stemGeo, M.steel); stem.position.y = .012;
       const sh = new THREE.Mesh(shoulderGeo, M.steel); sh.position.y = -.025;
+      hook.userData.hangerPart = stem.userData.hangerPart = sh.userData.hangerPart = true;
       g.add(body, hook, stem, sh); scene.add(g);
       state.slots[slot] = { type:'hang', group:g, body, mat, base:g.position.clone(), baseRot:0, t:0, view:{ x:-.75, z, yaw:Math.PI/2, pitch:-.1 }, geo:garmentGeo };
       animated.push(slot);
@@ -685,8 +689,8 @@ function build(){
   // テーブル（3台×8山）
   const stackGeo = new THREE.BoxGeometry(.26,.05,.32);
   TABLES.forEach((t) => {
-    add(new THREE.BoxGeometry(.9,.08,1.8), M.table, -1.05, .86, t.z);
-    add(new THREE.BoxGeometry(.5,.82,1.2), M.table, -1.05, .41, t.z);
+    envAdd(new THREE.BoxGeometry(.9,.08,1.8), M.table, -1.05, .86, t.z);
+    envAdd(new THREE.BoxGeometry(.5,.82,1.2), M.table, -1.05, .41, t.z);
     shadow(1.4, 2.4, -1.05, t.z);
     STACK_OFF.forEach(([x, dz], si) => {
       const slot = `${t.id}-${si+1}`;
@@ -703,6 +707,33 @@ function build(){
       animated.push(slot);
     });
   });
+}
+
+/* ===== Blenderで作った駅（光を焼き込み済み）を読み込む ===== */
+const ENV = [];
+const STATION_GLB = 'assets/station_baked.glb?v=1';
+async function loadStation(onProgress){
+  const draco = new DRACOLoader(); draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/');
+  const loader = new GLTFLoader(); loader.setDRACOLoader(draco);
+  const gltf = await loader.loadAsync(STATION_GLB, e => { if (e.total) onProgress(e.loaded / e.total); });
+  const root = gltf.scene; let hanger = null;
+  root.traverse(o => { if (o.name === 'ASSET_Hanger') hanger = o; });
+  if (hanger) hanger.removeFromParent();
+  for (const o of [...root.children]) if (!/^BK_/.test(o.name)) o.removeFromParent();
+  root.traverse(o => { if (!o.isMesh) return; const map = o.material.map;
+    if (map){ map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
+    o.material = new THREE.MeshBasicMaterial({ map, color:0xffffff }); o.matrixAutoUpdate = false; o.updateMatrix(); });
+  scene.add(root);
+  for (const m of ENV) m.removeFromParent();
+  renderer.toneMapping = THREE.NoToneMapping;            // 焼き込んだ色をそのまま出す
+  scene.traverse(o => { if (o.isPointLight && o.distance === 0) o.intensity *= .7; });
+  if (hanger){
+    hanger.position.set(0, 0, 0); hanger.rotation.set(0, 0, 0); hanger.scale.set(1, 1, 1);
+    for (const slot of animated){ const sl = state.slots[slot]; if (sl.type !== 'hang') continue;
+      sl.group.children.filter(c => c.userData.hangerPart).forEach(c => c.removeFromParent());
+      sl.group.add(hanger.clone(true)); }
+  }
+  state.baked = true;
 }
 
 /* ===== 商品をシーンに反映 ===== */
@@ -1414,7 +1445,10 @@ function toast(msg, acts){
   renderCart();
   if (IS_TOUCH){ $('#howTo').innerHTML = '左手で歩いて、右手で見回す。<br>服をタップすると、ラックを1着ずつ掘れるよ。'; $('#dHint').textContent = '← スワイプでめくる →'; }
   sizeMap();
-  const enter = $('#enter'); enter.disabled = false; enter.textContent = 'ENTER';
+  const enter = $('#enter');
+  try { await Promise.race([ loadStation(p => { enter.textContent = `LOADING ${Math.round(p * 100)}%`; }), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000)) ]); }
+  catch(e){ console.warn('Blenderの駅を読み込めなかったので、Web版の駅で表示します', e); }
+  enter.disabled = false; enter.textContent = 'ENTER';
   const loadedAt = performance.now();
   setInterval(() => { // 5秒ごとの現在地（動線ヒートマップ・売り場滞在・リアルタイム人数）
     if (!state.started || document.hidden) return;
