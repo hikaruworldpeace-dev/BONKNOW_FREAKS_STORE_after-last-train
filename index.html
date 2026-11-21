@@ -246,6 +246,11 @@ const CONFIG = {
     apiVersion: '2026-10',
     collectionHandle: 'station',
   },
+  // 計測（ダッシュボード用）：Supabase の URL と公開キー（anon / publishable）。空なら何も送らない
+  analytics: {
+    supabaseUrl: '',
+    supabaseKey: '',
+  },
 };
 const SHOP = CONFIG.shopify;
 const SHOPIFY_ON = !!(SHOP.domain && SHOP.storefrontToken);
@@ -700,6 +705,37 @@ async function loadShopify(){
 
 /* ===== カート（Shopifyのカートリンクでレジへ。APIなしで動く） ===== */
 const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
+
+/* ===== 計測（運営・マーケティング用ダッシュボードに送る） ===== */
+const T = (() => {
+  const cfg = CONFIG.analytics, on = !!(cfg.supabaseUrl && cfg.supabaseKey);
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  let vid = store.get('bkf_vid'), isNew = false; if (!vid){ vid = uid(); isNew = true; store.set('bkf_vid', vid); }
+  const sid = uid(), q = new URLSearchParams(location.search);
+  let refHost = null; try { refHost = document.referrer ? new URL(document.referrer).hostname : null; } catch(e){}
+  if (refHost === location.hostname) refHost = null;
+  const buf = []; let seq = 0; const used = new Set();
+  function ev(type, d = {}){
+    buf.push({ session_id:sid, visitor_id:vid, type, slot:d.slot ?? null, handle:d.handle ?? null, zone:d.zone ?? null,
+      value:d.value ?? null, x:d.x ?? null, z:d.z ?? null, props:d.props ?? null, client_ts:new Date().toISOString(), seq:seq++ });
+    if (buf.length >= 25) flush();
+  }
+  function flush(keep){
+    if (!on || !buf.length) return;
+    const rows = buf.splice(0, buf.length);
+    fetch(`${cfg.supabaseUrl}/rest/v1/events`, { method:'POST', keepalive:!!keep,
+      headers:{ apikey:cfg.supabaseKey, Authorization:`Bearer ${cfg.supabaseKey}`, 'Content-Type':'application/json', Prefer:'return=minimal' },
+      body:JSON.stringify(rows) }).catch(() => {});
+  }
+  setInterval(() => flush(), 8000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flush(true); });
+  addEventListener('pagehide', () => { ev('session_end', { value:Math.round(performance.now()/1000) }); flush(true); });
+  ev('session_start', { props:{ utm_source:q.get('utm_source'), utm_medium:q.get('utm_medium'), utm_campaign:q.get('utm_campaign'),
+    utm_content:q.get('utm_content'), ref:refHost, device:IS_TOUCH ? 'mobile' : 'desktop', new_visitor:isNew,
+    sw:screen.width, sh:screen.height, lang:navigator.language } });
+  const method = m => { if (!used.has(m)){ used.add(m); ev('move_method', { props:{ m } }); } };
+  return { ev, method, flush, sid };
+})();
 function addToCart(slot, vid){
   const it = state.items[slot]; if (!it) return;
   const v = it.variants.find(v => String(v.id) === String(vid));
@@ -707,8 +743,9 @@ function addToCart(slot, vid){
   const line = state.cart.find(l => String(l.vid) === String(vid));
   if (line) line.qty = Math.min(line.qty + 1, 5); else state.cart.push({ vid:String(v.id), handle:it.handle, size:v.size, qty:1 });
   saveCart(); renderCart(); toast(`カートに入れた：${it.title}（${v.size}）`); haptic(15);
+  T.ev('add_to_cart', { slot, handle:it.handle, zone:slot.split('-')[0], value:v.price, props:{ size:v.size } });
 }
-function removeLine(vid){ state.cart = state.cart.filter(l => l.vid !== vid); saveCart(); renderCart(); }
+function removeLine(vid){ const l = state.cart.find(l => l.vid === vid); if (l) T.ev('remove_from_cart', { handle:l.handle, props:{ size:l.size } }); state.cart = state.cart.filter(l => l.vid !== vid); saveCart(); renderCart(); }
 function saveCart(){ store.set('bkf_cart2', state.cart); }
 const checkoutUrl = () => `${SITE}/cart/${state.cart.map(l => `${l.vid}:${l.qty}`).join(',')}`;
 function renderCart(){
@@ -733,7 +770,11 @@ function renderCart(){
   co.href = rows.length ? checkoutUrl() : '#'; co.style.opacity = rows.length ? 1 : .4;
   $('#cartNote').textContent = 'レジに進むと、BONKNOW FREAKSのオンラインストア（Shopify）の決済画面に移動します。在庫はそこで最終確認されます。';
 }
-$('#checkout').addEventListener('click', e => { if (!state.cart.length) e.preventDefault(); });
+$('#checkout').addEventListener('click', e => {
+  if (!state.cart.length){ e.preventDefault(); return; }
+  let total = 0; const items = state.cart.map(l => { const it = byHandle(l.handle); const v = it && it.variants.find(v => String(v.id) === l.vid); total += (v ? v.price : 0) * l.qty; return l.handle; });
+  T.ev('checkout_click', { value:total, props:{ items:state.cart.reduce((a,l) => a + l.qty, 0), handles:items } }); T.flush(true);
+});
 
 /* ===== 商品パネル ===== */
 let pickedVid = null;
@@ -753,19 +794,20 @@ function openPanel(slot){
   for (const v of it.variants){
     const b = document.createElement('button'); b.className = 'size' + (v.available ? '' : ' out') + (String(v.id) === pickedVid ? ' on' : '');
     b.textContent = v.size; b.disabled = !v.available; b.title = v.available ? '' : '売り切れ';
-    b.onclick = () => { pickedVid = String(v.id); box.querySelectorAll('.size').forEach(x => x.classList.remove('on')); b.classList.add('on'); };
+    b.onclick = () => { pickedVid = String(v.id); box.querySelectorAll('.size').forEach(x => x.classList.remove('on')); b.classList.add('on'); T.ev('size_select', { handle:it.handle, props:{ size:v.size } }); };
     box.appendChild(b);
   }
   $('#pDesc').textContent = it.desc;
   const add = $('#pAdd'); add.disabled = !it.available; add.textContent = it.available ? 'カートに入れる' : 'SOLD OUT';
-  const link = $('#pLink'); link.href = it.url; link.style.display = '';
+  const link = $('#pLink'); link.href = it.url; link.style.display = ''; link.onclick = () => T.ev('product_page_click', { handle:it.handle });
   p.classList.add('open'); p.setAttribute('aria-hidden','false');
+  T.ev('product_open', { slot, handle:it.handle, zone:slot.split('-')[0], props:{ available:it.available } });
   $('#dig').classList.remove('show'); $('#tip').style.display = 'none';
 }
 function closePanel(silent){ state.selected = null; $('#panel').classList.remove('open'); $('#panel').setAttribute('aria-hidden','true'); if (!silent && typeof renderDig === 'function') renderDig(); }
 $('#panelClose').onclick = () => closePanel();
 $('#pAdd').onclick = () => { if (state.selected && pickedVid) addToCart(state.selected, pickedVid); };
-$('#pImg').onclick = () => { const it = state.items[state.selected]; if (!it || it.images.length < 2) return; const img = $('#pImg'); const n = (+img.dataset.idx + 1) % it.images.length; img.dataset.idx = n; setImg(img, it, 900, n); };
+$('#pImg').onclick = () => { const it = state.items[state.selected]; if (!it || it.images.length < 2) return; T.ev('photo_next', { handle:it.handle }); const img = $('#pImg'); const n = (+img.dataset.idx + 1) % it.images.length; img.dataset.idx = n; setImg(img, it, 900, n); };
 $('#panel').addEventListener('pointerdown', e => e.stopPropagation());
 
 /* ===== 一覧 ===== */
@@ -782,15 +824,15 @@ function renderList(){
     c.innerHTML = `<img alt="" loading="lazy"><div class="z"></div><div class="n"></div><div class="p"></div>`;
     setImg(c.querySelector('img'), it, 400); c.querySelector('.z').textContent = `${it.zone}　${s}`; c.querySelector('.n').textContent = it.title;
     c.querySelector('.p').textContent = it.available ? yen(it.price) : 'SOLD OUT';
-    c.onclick = () => { closeSheets(); enterDig(s); };
+    c.onclick = () => { T.ev('list_pick', { slot:s, handle:it.handle }); closeSheets(); enterDig(s); };
     grid.appendChild(c);
   });
 }
 function openSheet(id){ closePanel(); $(id).classList.add('open'); }
 function closeSheets(){ document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); }
 document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s || e.target.hasAttribute('data-close')) closeSheets(); }));
-$('#cartBtn').onclick = () => { renderCart(); openSheet('#cartSheet'); };
-$('#listBtn').onclick = () => { renderList(); openSheet('#listSheet'); };
+$('#cartBtn').onclick = () => { renderCart(); openSheet('#cartSheet'); T.ev('cart_open', { value:state.cart.length }); };
+$('#listBtn').onclick = () => { renderList(); openSheet('#listSheet'); T.ev('list_open'); };
 
 
 /* ===== 移動・視点（ゲーム的な操作） ===== */
@@ -821,10 +863,12 @@ function enterDig(slot){
   state.dig = { zone, list, idx: Math.max(0, list.indexOf(slot)) };
   state.hovered = null; closePanel(true);
   document.body.classList.add('digging');
+  T.ev('dig_enter', { zone, slot, handle:state.items[slot] && state.items[slot].handle });
   focusDig(1.0); haptic(12); hideCoach();
 }
 function focusDig(dur){
   const d = state.dig, slot = d.list[d.idx], v = viewFor(slot);
+  T.ev('dig_view', { zone:d.zone, slot, handle:state.items[slot].handle, props:{ available:state.items[slot].available, idx:d.idx } });
   flyTo(v.x, v.z, v.yaw, v.pitch, null, dur);
   renderDig();
 }
@@ -836,6 +880,7 @@ function flip(dir){
 }
 function exitDig(){
   if (!state.dig) return;
+  T.ev('dig_exit', { zone:state.dig.zone });
   state.dig = null; document.body.classList.remove('digging'); closePanel(true); renderDig();
   flyTo(clamp(state.pos.x + .7, -2, .1), state.pos.z, state.yaw, -.04, null, .6);
 }
@@ -864,7 +909,7 @@ const NAV = [
   { k:'IN', label:'入口', go:() => { if (state.dig){ state.dig = null; document.body.classList.remove('digging'); renderDig(); } flyTo(-1.6, 13.8, .14, -.02); } },
   ...ZONES.map(z => ({ k:z.id, label:z.label.replace(/^\d+ — /,''), go:() => { const l = zoneSlots(z.id); if (l.length) enterDig(l[0]); } })),
 ];
-NAV.forEach(n => { const b = document.createElement('button'); b.className = 'btn'; b.innerHTML = `<small>${n.k}</small>`; b.append(n.label); b.onclick = () => { closePanel(); n.go(); }; $('#nav').appendChild(b); });
+NAV.forEach(n => { const b = document.createElement('button'); b.className = 'btn'; b.innerHTML = `<small>${n.k}</small>`; b.append(n.label); b.onclick = () => { closePanel(); T.ev('nav', { zone:n.k }); T.method('nav'); n.go(); }; $('#nav').appendChild(b); });
 
 /* --- キーボード --- */
 const keys = {};
@@ -920,7 +965,7 @@ function updateMove(dt, rawDt){
   wheel *= .85; if (Math.abs(wheel) < .01) wheel = 0;
   state.tyaw += turn * 1.9 * dt;
   const manual = Math.hypot(fwd, side) > .05;
-  if (manual){ state.walk = null; hideCoach(); }
+  if (manual){ state.walk = null; hideCoach(); if (joy.id === null && Math.abs(wheel) < .01) T.method('keys'); }
   const target = new THREE.Vector3();
   if (state.walk){
     const dx = state.walk.x - state.pos.x, dz = state.walk.z - state.pos.z, d = Math.hypot(dx, dz);
@@ -954,7 +999,8 @@ function updateMove(dt, rawDt){
 /* --- タップで歩く先のマーカー --- */
 const marker = new THREE.Mesh(new THREE.RingGeometry(.16, .22, 40).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({ color:new THREE.Color(0x00e5ff).multiplyScalar(2), toneMapped:false, transparent:true, depthWrite:false }));
 marker.visible = false; marker.position.y = .01; scene.add(marker);
-function walkTo(x, z){
+function walkTo(x, z, src='tap'){
+  T.method(src);
   const p = new THREE.Vector3(x, 0, z); collide(p);
   state.walk = { x:p.x, z:p.z }; stuckT = 0;
   marker.position.set(p.x, .01, p.z); marker.visible = true; marker.userData.t = 0;
@@ -992,7 +1038,7 @@ function handleTap(cx, cy){
 const cvs = renderer.domElement;
 const ptrs = new Map();
 const joyEl = $('#joy'), knob = joyEl.querySelector('i');
-function joyStart(e){ joy.id = e.pointerId; joy.cx = e.clientX; joy.cy = e.clientY; joy.x = joy.y = 0; joyEl.style.left = (e.clientX - 60) + 'px'; joyEl.style.top = (e.clientY - 60) + 'px'; knob.style.transform = ''; joyEl.classList.add('on'); state.walk = null; marker.visible = false; }
+function joyStart(e){ T.method('joystick'); joy.id = e.pointerId; joy.cx = e.clientX; joy.cy = e.clientY; joy.x = joy.y = 0; joyEl.style.left = (e.clientX - 60) + 'px'; joyEl.style.top = (e.clientY - 60) + 'px'; knob.style.transform = ''; joyEl.classList.add('on'); state.walk = null; marker.visible = false; }
 function joyMove(e){
   let x = (e.clientX - joy.cx) / 52, y = (e.clientY - joy.cy) / 52; const l = Math.hypot(x, y);
   if (l > 1){ // 指がはみ出したら土台ごと付いてくる
@@ -1058,7 +1104,7 @@ let wheelLock = 0;
 cvs.addEventListener('wheel', e => {
   e.preventDefault(); if (state.fly) return;
   if (state.dig){ const now = performance.now(); if (now - wheelLock > 220 && Math.abs(e.deltaY) > 4){ wheelLock = now; flip(e.deltaY > 0 ? 1 : -1); } return; }
-  wheel = clamp(wheel - e.deltaY * .004, -1.6, 1.6);
+  wheel = clamp(wheel - e.deltaY * .004, -1.6, 1.6); T.method('wheel');
 }, { passive:false });
 
 /* --- ミニマップ（タップでその売り場へ） --- */
@@ -1099,7 +1145,7 @@ mapC.addEventListener('click', e => {
   closePanel();
   if (best && Math.abs(best.z - z) < best.d/2 + .4){ const l = zoneSlots(best.id); if (l.length){ enterDig(l[0]); return; } }
   if (state.dig){ state.dig = null; document.body.classList.remove('digging'); renderDig(); }
-  walkTo(x, z);
+  walkTo(x, z, 'map');
 });
 
 /* --- 初回の操作ガイド --- */
@@ -1141,7 +1187,7 @@ $('#soundBtn').onclick = async () => {
     audio.on = !audio.on;
     if (audio.on) await audio.ctx.resume(); else await audio.ctx.suspend();
   } catch(e){ audio.on = false; toast('サウンドを再生できなかった'); }
-  $('#soundBtn').textContent = audio.on ? '♪ ON' : '♪ OFF';
+  $('#soundBtn').textContent = audio.on ? '♪ ON' : '♪ OFF'; T.ev('sound', { value:audio.on ? 1 : 0 });
   $('#soundBtn').classList.toggle('on', audio.on);
 };
 const beat = () => audio.on && audio.ctx ? Math.exp(-(audio.ctx.currentTime - audio.lastKick) * 7) : 0;
@@ -1229,7 +1275,14 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
   if (IS_TOUCH){ $('#howTo').innerHTML = '左手で歩いて、右手で見回す。<br>服をタップすると、ラックを1着ずつ掘れるよ。'; $('#dHint').textContent = '← スワイプでめくる →'; }
   sizeMap();
   const enter = $('#enter'); enter.disabled = false; enter.textContent = 'ENTER';
-  enter.onclick = () => { state.started = true; $('#intro').classList.add('hide'); cvs.style.cursor = 'grab'; setTimeout(() => toast('ようこそ、終電後のBONKNOW FREAKS駅へ'), 500); showCoach(); };
+  const loadedAt = performance.now();
+  setInterval(() => { // 5秒ごとの現在地（動線ヒートマップ・売り場滞在・リアルタイム人数）
+    if (!state.started || document.hidden) return;
+    const p = state.pos; let zone = state.dig ? state.dig.zone : null;
+    if (!zone){ let best = 1.2; for (const zn of ZONES){ const d = Math.max(Math.abs(p.z - zn.z) - zn.d/2, 0) + Math.max(Math.abs(p.x - zn.x) - zn.w/2, 0) * .5; if (d < best){ best = d; zone = zn.id; } } }
+    T.ev('pos', { x:Math.round(p.x*10)/10, z:Math.round(p.z*10)/10, zone:zone || 'AISLE', props:{ dig:!!state.dig, panel:!!state.selected } });
+  }, 5000);
+  enter.onclick = () => { T.ev('enter', { value:Math.round((performance.now() - loadedAt)/100)/10 }); state.started = true; $('#intro').classList.add('hide'); cvs.style.cursor = 'grab'; setTimeout(() => toast('ようこそ、終電後のBONKNOW FREAKS駅へ'), 500); showCoach(); };
   frame();
 })().catch(e => { console.error(e); $('#err').style.display = 'flex'; $('#err').textContent = '読み込みに失敗しました：' + e.message; });
 </script>

@@ -21,3 +21,10 @@
 
 ## 公開
 Vercel に静的サイトとしてデプロイ（main に push すると自動更新）。
+
+## ダッシュボード（/admin）
+運営（プレイ状況）とマーケティング（集客・CVR・商品の反応）をまとめた管理画面。
+- `admin/index.html` … ダッシュボード本体（合言葉でログイン。`#demo` でデモデータ表示）
+- `supabase/schema.sql` … 計測データの保存先（Supabase）の設計図
+- 店のページの `CONFIG.analytics` と、`admin/index.html` の `SUPABASE_URL` / `SUPABASE_KEY` に同じ値を入れると計測が始まる
+- 計測イベント：来訪（UTM・参照元・端末）、入店、5秒ごとの現在地、移動方法、ディグ、詳細、サイズ、カート、レジ、一覧、サウンド

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>CONTROL ROOM — BONKNOW STATION</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Noto+Sans+JP:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.viz-root{
+  color-scheme:dark;
+  --bg:#0b0c10; --surface-1:#15161b; --surface-2:#1c1d23; --line:rgba(255,255,255,.08);
+  --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#8a897f;
+  --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500; --series-5:#d55181;
+  --good:#0ca30c; --critical:#e66767; --brand:#00e5ff; --brand-red:#e32017;
+  --mono:'Space Mono',ui-monospace,monospace; --head:'Archivo Black','Noto Sans JP',sans-serif; --body:'Noto Sans JP',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0b0c10}
+body{color:var(--text-primary);font-family:var(--body);font-size:13px;line-height:1.5;min-height:100vh}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+.wrap{max-width:1320px;margin:0 auto;padding:18px 20px 60px}
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.logo .t{font-family:var(--head);font-size:17px;letter-spacing:.03em}
+.logo .s{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--brand)}
+.tabs{display:flex;gap:4px;margin-left:12px}
+.tab{font-family:var(--mono);font-size:11px;letter-spacing:.12em;padding:8px 12px;border:1px solid transparent;border-radius:3px;color:var(--text-secondary)}
+.tab.on{border-color:rgba(255,255,255,.22);color:var(--text-primary);background:var(--surface-1)}
+.tab small{display:block;font-family:var(--body);font-size:10px;letter-spacing:0;color:var(--text-muted)}
+.spacer{flex:1}
+.live{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--text-secondary)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(12,163,12,.6);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(12,163,12,0)}100%{box-shadow:0 0 0 0 rgba(12,163,12,0)}}
+.badge{font-family:var(--mono);font-size:10px;letter-spacing:.15em;padding:3px 7px;border:1px solid var(--series-4);color:var(--series-4);border-radius:2px}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 0 6px}
+.chip{font-family:var(--mono);font-size:11px;padding:6px 10px;border:1px solid var(--line);border-radius:3px;color:var(--text-secondary);background:var(--surface-1)}
+.chip.on{border-color:rgba(255,255,255,.35);color:var(--text-primary)}
+select.chip{appearance:none;padding-right:22px;background:var(--surface-1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a897f'/%3E%3C/svg%3E") no-repeat right 8px center}
+.flab{font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.1em;margin-left:6px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:12px}
+.card{background:var(--surface-1);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
+.card h3{font-size:12px;font-weight:700;color:var(--text-primary);display:flex;align-items:baseline;gap:8px}
+.card h3 small{font-weight:400;color:var(--text-muted);font-size:11px}
+.card .note{font-size:11px;color:var(--text-muted);margin-top:2px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
+.kpi{background:var(--surface-1);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.kpi .l{font-size:11px;color:var(--text-secondary)}
+.kpi .v{font-family:var(--head);font-size:26px;letter-spacing:.01em;margin-top:2px;line-height:1.2}
+.kpi .v.sm{font-family:var(--body);font-weight:900;font-size:15px;line-height:1.35;margin-top:6px}
+.kpi .v small{font-family:var(--mono);font-size:12px;color:var(--text-secondary);margin-left:3px}
+.kpi .d{font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:2px}
+.chart{margin-top:10px;position:relative}
+.chart svg{display:block;width:100%;overflow:visible}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--text-secondary)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+table.t{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+table.t th{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--text-muted);text-align:right;font-weight:400;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t th.sorted{color:var(--text-primary)}
+table.t td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t td.name{max-width:280px;overflow:hidden;text-overflow:ellipsis}
+table.t tr.click{cursor:pointer}
+table.t tr.click:hover td{background:var(--surface-2)}
+.scroll{max-height:420px;overflow:auto}
+.pill{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:9px;border:1px solid var(--line);color:var(--text-secondary)}
+.pill.ok{border-color:rgba(12,163,12,.6);color:#7fd67f}
+.pill.sold{border-color:rgba(230,103,103,.5);color:#f0a0a0}
+.mapwrap{position:relative;margin-top:10px}
+.mapwrap canvas{width:100%;display:block;border-radius:4px}
+.mapctl{display:flex;gap:6px;margin-top:8px}
+#tt{position:fixed;z-index:50;pointer-events:none;background:#000c;border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:7px 9px;font-size:11px;line-height:1.55;display:none;max-width:260px}
+#tt b{font-weight:700}
+.empty{color:var(--text-muted);font-size:12px;padding:24px 0;text-align:center}
+.timeline{margin-top:10px;font-family:var(--mono);font-size:11px;max-height:360px;overflow:auto}
+.timeline div{display:grid;grid-template-columns:62px 130px 1fr;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+.timeline span:first-child{color:var(--text-muted)}
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+#login .box{width:min(380px,100%);text-align:center}
+#login h1{font-family:var(--head);font-size:30px;line-height:1;margin-top:18px}
+#login p{color:var(--text-secondary);margin-top:10px;font-size:12px}
+#login input{width:100%;margin-top:22px;padding:12px 14px;background:var(--surface-1);border:1px solid rgba(255,255,255,.2);border-radius:4px;font-family:var(--mono);letter-spacing:.1em}
+#login .go{width:100%;margin-top:10px;padding:13px;background:var(--brand-red);color:#fff;font-weight:700;border-radius:4px;letter-spacing:.08em}
+#login .demo{margin-top:12px;font-size:12px;color:var(--text-secondary);text-decoration:underline}
+#login .err{color:var(--critical);font-size:12px;margin-top:10px;min-height:18px}
+.roundel{width:70px;height:70px;margin:0 auto;position:relative}
+.roundel:before{content:"";position:absolute;inset:0;border-radius:50%;border:12px solid var(--brand-red)}
+.roundel span{position:absolute;left:-18px;right:-18px;top:50%;transform:translateY(-50%);background:#0019a8;font-family:var(--head);font-size:8px;padding:4px 0;color:#fff}
+#app{display:none}
+@media (max-width:900px){.c3,.c4,.c5,.c6,.c7,.c8{grid-column:span 12}.tabs{margin-left:0;width:100%}}
+</style>
+</head>
+<body class="viz-root">
+
+<div id="login"><div class="box">
+  <div class="roundel"><span>BONKNOW FREAKS</span></div>
+  <h1>CONTROL<br>ROOM</h1>
+  <p>AFTER LAST TRAIN の運営・マーケティング用ダッシュボード</p>
+  <input id="key" type="password" placeholder="合言葉" autocomplete="current-password">
+  <button class="go" id="go">ひらく</button>
+  <div class="err" id="err"></div>
+  <button class="demo" id="demo">デモデータで見てみる</button>
+</div></div>
+
+<div id="app"><div class="wrap">
+  <header class="top">
+    <div class="logo"><div class="t">CONTROL ROOM</div><div class="s">BONKNOW STATION</div></div>
+    <nav class="tabs" id="tabs">
+      <button class="tab on" data-tab="play">PLAY<small>運営・プレイ状況</small></button>
+      <button class="tab" data-tab="mkt">MARKETING<small>集客・CVR</small></button>
+      <button class="tab" data-tab="items">ITEMS<small>商品の反応</small></button>
+    </nav>
+    <div class="spacer"></div>
+    <span class="badge" id="demoBadge" style="display:none">DEMO DATA</span>
+    <div class="live"><i></i><span id="liveTxt">—</span></div>
+    <button class="chip" id="refresh">更新</button>
+  </header>
+
+  <div class="filters">
+    <span class="flab">期間</span>
+    <div id="range" style="display:flex;gap:6px">
+      <button class="chip" data-r="today">今日</button>
+      <button class="chip on" data-r="7">7日</button>
+      <button class="chip" data-r="30">30日</button>
+      <button class="chip" data-r="90">90日</button>
+    </div>
+    <span class="flab">端末</span>
+    <select class="chip" id="fDevice"><option value="">すべて</option><option value="mobile">スマホ</option><option value="desktop">PC</option></select>
+    <span class="flab">流入元</span>
+    <select class="chip" id="fSource"><option value="">すべて</option></select>
+    <span class="spacer"></span>
+    <span class="flab" id="updated"></span>
+  </div>
+
+  <!-- PLAY -->
+  <section data-panel="play">
+    <div class="kpis" id="playKpis"></div>
+    <div class="grid">
+      <div class="card c8">
+        <h3>店内マップ <small id="mapNote">動線ヒートマップ（5秒ごとの現在地）</small></h3>
+        <div class="mapwrap"><canvas id="map"></canvas></div>
+        <div class="mapctl"><button class="chip on" data-m="heat">動線ヒートマップ</button><button class="chip" data-m="live">いま店内にいる人</button></div>
+        <div class="legend" id="mapLegend"></div>
+      </div>
+      <div class="card c4">
+        <h3>売り場別の滞在時間 <small>合計・分</small></h3>
+        <div class="chart" id="zoneDwell"></div>
+      </div>
+      <div class="card c4">
+        <h3>プレイ時間の分布 <small>入店した人</small></h3>
+        <div class="chart" id="durHist"></div>
+      </div>
+      <div class="card c4">
+        <h3>移動のしかた <small>使った人の割合</small></h3>
+        <div class="chart" id="moveMethods"></div>
+      </div>
+      <div class="card c4">
+        <h3>遊び方 <small>入店した人のうち</small></h3>
+        <div class="chart" id="behaviors"></div>
+      </div>
+      <div class="card c7">
+        <h3>プレイヤー一覧 <small>クリックで行動ログ</small></h3>
+        <div class="scroll"><table class="t" id="players"></table></div>
+      </div>
+      <div class="card c5">
+        <h3 id="tlTitle">行動ログ <small>プレイヤーを選んでね</small></h3>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARKETING -->
+  <section data-panel="mkt" hidden>
+    <div class="kpis" id="mktKpis"></div>
+    <div class="grid">
+      <div class="card c6">
+        <h3>ファネル <small>来訪 → レジ到達</small></h3>
+        <div class="chart" id="funnel"></div>
+      </div>
+      <div class="card c6">
+        <h3>日別の来訪数</h3>
+        <div class="chart" id="dailySessions"></div>
+      </div>
+      <div class="card c6">
+        <h3>日別のレジ到達率（CVR）</h3>
+        <div class="chart" id="dailyCvr"></div>
+      </div>
+      <div class="card c6">
+        <h3>時間帯別の来訪 <small>日本時間</small></h3>
+        <div class="chart" id="hourly"></div>
+      </div>
+      <div class="card c12">
+        <h3>流入元別 <small>utm_source / 参照元ドメイン。列名クリックで並べ替え</small></h3>
+        <div class="scroll"><table class="t" id="sources"></table></div>
+      </div>
+      <div class="card c6">
+        <h3>キャンペーン別 <small>utm_campaign</small></h3>
+        <div class="scroll"><table class="t" id="campaigns"></table></div>
+      </div>
+      <div class="card c6">
+        <h3>端末別</h3>
+        <table class="t" id="devices"></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ITEMS -->
+  <section data-panel="items" hidden>
+    <div class="kpis" id="itemKpis"></div>
+    <div class="grid">
+      <div class="card c6">
+        <h3>売り場別の反応 <small>めくられた回数</small></h3>
+        <div class="chart" id="zoneViews"></div>
+      </div>
+      <div class="card c6">
+        <h3>SOLD商品への関心 <small>再販・再生産の判断材料（詳細を開いた人数）</small></h3>
+        <div class="chart" id="soldInterest"></div>
+      </div>
+      <div class="card c12">
+        <h3>商品別 <small>めくった → 詳細 → カート → レジ。列名クリックで並べ替え</small></h3>
+        <div class="scroll" style="max-height:560px"><table class="t" id="itemsTable"></table></div>
+      </div>
+    </div>
+  </section>
+</div></div>
+<div id="tt"></div>
+
+<script>
+/* ===== 設定：店のページ（index.html）の CONFIG.analytics と同じ値 ===== */
+const SUPABASE_URL = '';
+const SUPABASE_KEY = '';
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+const pct = (a, b) => b ? (a / b * 100) : 0;
+const fp = v => (Math.round(v * 10) / 10).toFixed(1) + '%';
+const fnum = n => Math.round(n).toLocaleString('ja-JP');
+const fdur = s => s >= 3600 ? `${Math.floor(s/3600)}時間${Math.round(s%3600/60)}分` : s >= 60 ? `${Math.floor(s/60)}分${String(Math.round(s%60)).padStart(2,'0')}秒` : `${Math.round(s)}秒`;
+const jstDay = d => new Date(d).toLocaleDateString('sv-SE', { timeZone:'Asia/Tokyo' });
+const jstHour = d => +new Date(d).toLocaleString('en-US', { timeZone:'Asia/Tokyo', hour:'numeric', hour12:false }) % 24;
+const jstTime = d => new Date(d).toLocaleString('ja-JP', { timeZone:'Asia/Tokyo', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const css = v => getComputedStyle(document.body).getPropertyValue(v).trim();
+const S = ['--series-1','--series-2','--series-3','--series-4','--series-5'].map(css);
+const HB = 5; // 現在地の送信間隔（秒）
+
+/* ===== 店の配置（index.html と同じ） ===== */
+const ZONES = [
+  { id:'R1', x:-2.55, z:9,  w:.8, d:3.2, label:'01 OUTER' },
+  { id:'R2', x:-2.55, z:3,  w:.8, d:3.2, label:'02 HOODIE & KNIT' },
+  { id:'R3', x:-2.55, z:-3, w:.8, d:3.2, label:'03 WIDE PANTS' },
+  { id:'R4', x:-2.55, z:-9, w:.8, d:3.2, label:'04 SWEAT PANTS' },
+  { id:'T1', x:-1.05, z:6,  w:1.0, d:1.9, label:'TEE' },
+  { id:'T2', x:-1.05, z:0,  w:1.0, d:1.9, label:'SHORTS' },
+  { id:'T3', x:-1.05, z:-6, w:1.0, d:1.9, label:'SHORTS & BAGS' },
+];
+const ZLABEL = Object.fromEntries([...ZONES.map(z => [z.id, z.label]), ['AISLE','通路']]);
+const MOVE_LABEL = { joystick:'スティック', keys:'キーボード', tap:'床タップで移動', map:'ミニマップ', nav:'売り場ボタン', wheel:'ホイール' };
+
+let CATALOG = {}; // handle -> product
+let RAW = [], MODE = 'real', KEY = '';
+const st = { tab:'play', range:'7', device:'', source:'', map:'heat', player:null, sort:{} };
+
+/* ===== データ取得 ===== */
+async function loadCatalog(){
+  try {
+    const html = await (await fetch('/', { cache:'no-store' })).text();
+    const m = html.match(/<script type="application\/json" id="catalog">([\s\S]*?)<\/script>/);
+    if (m) for (const p of JSON.parse(m[1])) CATALOG[p.h] = { title:p.t, available:p.v.some(v => v[3]), price:Math.min(...p.v.map(v => v[2])), img:p.i && p.i[0] };
+  } catch(e){}
+}
+function rangeBounds(){
+  const now = new Date();
+  if (st.range === 'today'){ const d = new Date(jstDay(now) + 'T00:00:00+09:00'); return [d, new Date(+now + 60000)]; }
+  return [new Date(+now - (+st.range) * 86400000), new Date(+now + 60000)];
+}
+async function fetchEvents(){
+  const [from, to] = rangeBounds();
+  const out = []; let after = 0;
+  for (let i = 0; i < 300; i++){
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/dash_events`, { method:'POST',
+      headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+      body:JSON.stringify({ p_key:KEY, p_from:from.toISOString(), p_to:to.toISOString(), p_after_id:after }) });
+    if (r.status === 401 || r.status === 403 || r.status === 400){ const t = await r.text(); throw new Error(/unauthorized/.test(t) ? 'unauthorized' : t); }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const rows = await r.json(); out.push(...rows);
+    if (rows.length < 1000) break; after = rows[rows.length - 1].id;
+  }
+  return out;
+}
+
+/* ===== デモデータ（実データがたまるまでの確認用） ===== */
+function demoEvents(){
+  let seed = 7; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pickW = arr => { const t = arr.reduce((a, x) => a + x[1], 0); let r = R() * t; for (const x of arr){ if ((r -= x[1]) <= 0) return x[0]; } return arr[0][0]; };
+  const handles = Object.keys(CATALOG);
+  const zoneOf = h => { const t = (CATALOG[h] || {}).title || ''; const l = t.toLowerCase();
+    if (/bag/.test(l)) return 'T3'; if (/shorts/.test(l)) return R() < .8 ? 'T2' : 'T3'; if (/tee/.test(l)) return 'T1';
+    if (/pants/.test(l)) return /type-002|corduroy/i.test(t) ? 'R3' : 'R4'; if (/hoodie|knit|crew/.test(l)) return 'R2'; return 'R1'; };
+  const byZone = {}; for (const h of handles){ (byZone[zoneOf(h)] ||= []).push(h); }
+  const SRC = [ [{ s:'instagram', m:'social', c:'last_train_launch' }, 30], [{ s:'tiktok', m:'paid', c:'balance_exclusive' }, 18], [{ s:'x', m:'social', c:'last_train_launch' }, 9],
+    [{ ref:null }, 20], [{ ref:'www.google.com' }, 10], [{ ref:'bonknowfreaks.com' }, 9], [{ s:'line', m:'message', c:'member_news' }, 4] ];
+  const ev = []; let id = 1; const now = Date.now();
+  const push = (sid, vid, t, type, d = {}) => ev.push({ id:id++, ts:new Date(t).toISOString(), session_id:sid, visitor_id:vid, type, slot:d.slot ?? null, handle:d.handle ?? null, zone:d.zone ?? null, value:d.value ?? null, x:d.x ?? null, z:d.z ?? null, props:d.props ?? null });
+  const visitors = Array.from({ length:420 }, (_, i) => 'v' + i);
+  const mkSession = (start, live) => {
+    const sid = 's' + id, vid = visitors[Math.floor(R() * R() * visitors.length)];
+    const src = pickW(SRC), mobile = R() < .72; let t = start;
+    push(sid, vid, t, 'session_start', { props:{ utm_source:src.s || null, utm_medium:src.m || null, utm_campaign:src.c || null, ref:src.ref || null, device:mobile ? 'mobile' : 'desktop', new_visitor:R() < .7 } });
+    const enterP = src.m === 'paid' ? .62 : src.ref === 'bonknowfreaks.com' ? .9 : .8;
+    if (R() > enterP){ push(sid, vid, t + 4000 + R() * 9000, 'session_end'); return; }
+    t += 3000 + R() * 6000; push(sid, vid, t, 'enter', { value:Math.round(30 + R() * 80) / 10 });
+    const dur = live ? 60 + R() * 200 : Math.exp(Math.log(140) + (R() + R() + R() - 1.5) * 1.3);
+    const end = t + dur * 1000;
+    const methods = mobile ? [['joystick', .85], ['tap', .45], ['map', .3], ['nav', .08]] : [['keys', .6], ['tap', .5], ['wheel', .3], ['nav', .45], ['map', .2]];
+    for (const [m, p] of methods) if (R() < p) push(sid, vid, t + 2000 + R() * 8000, 'move_method', { props:{ m } });
+    if (R() < .17) push(sid, vid, t + 5000, 'sound', { value:1 });
+    // 動線と売り場
+    const plan = []; const zs = ZONES.map(z => z.id).filter(() => R() < .55); if (!zs.length) zs.push(pickW([['R1', 4], ['R2', 2], ['T1', 1]]));
+    zs.sort((a, b) => ZONES.find(z => z.id === b).z - ZONES.find(z => z.id === a).z);
+    let px = -1.6, pz = 13.8, tt = t, zi = 0, cart = [];
+    while (tt < end){
+      const zone = zs[zi]; const Z = ZONES.find(z => z.id === zone);
+      const tx = Z.id[0] === 'R' ? -1.2 : .05, tz = Z.z + (Z.id[0] === 'R' ? (R() - .5) * 2.4 : 1.1);
+      const steps = Math.max(1, Math.round(Math.hypot(tx - px, tz - pz) / 2.6));
+      for (let k = 1; k <= steps && tt < end; k++){ tt += HB * 1000; const x = px + (tx - px) * k / steps + (R() - .5) * .4, z = pz + (tz - pz) * k / steps;
+        let nz = 'AISLE', best = 1.2; for (const zn of ZONES){ const d = Math.max(Math.abs(z - zn.z) - zn.d/2, 0) + Math.max(Math.abs(x - zn.x) - zn.w/2, 0) * .5; if (d < best){ best = d; nz = zn.id; } }
+        push(sid, vid, tt, 'pos', { x:Math.round(x*10)/10, z:Math.round(z*10)/10, zone:nz, props:{ dig:false } }); }
+      px = tx; pz = tz;
+      // ディグ
+      const list = byZone[zone] || []; if (list.length){
+        push(sid, vid, tt, 'dig_enter', { zone });
+        const n = 1 + Math.floor(R() * Math.min(list.length, 9));
+        for (let k = 0; k < n && tt < end; k++){
+          const h = list[Math.min(list.length - 1, Math.floor(R() * R() * list.length * 1.4))]; const c = CATALOG[h] || {};
+          tt += (2 + R() * 6) * 1000; push(sid, vid, tt, 'dig_view', { zone, handle:h, slot:zone + '-' + (k+1), props:{ available:c.available } });
+          if (R() < .1) push(sid, vid, tt, 'pos', { x:px, z:pz, zone, props:{ dig:true } });
+          if (R() < (c.available ? .38 : .26)){
+            tt += 1500; push(sid, vid, tt, 'product_open', { zone, handle:h, props:{ available:c.available } });
+            if (R() < .5) push(sid, vid, tt + 2000, 'photo_next', { handle:h });
+            if (c.available && R() < .28){ tt += 6000; push(sid, vid, tt, 'size_select', { handle:h, props:{ size:'M' } }); push(sid, vid, tt + 800, 'add_to_cart', { zone, handle:h, value:c.price, props:{ size:'M' } }); cart.push(h); }
+            if (R() < .06) push(sid, vid, tt + 1000, 'product_page_click', { handle:h });
+          }
+          for (let w = 0; w < 1 + Math.floor(R() * 2); w++) push(sid, vid, tt += HB * 1000, 'pos', { x:Math.round((px + (R()-.5)*.3)*10)/10, z:Math.round((pz + (R()-.5)*.6)*10)/10, zone, props:{ dig:true } });
+        }
+        push(sid, vid, tt, 'dig_exit', { zone });
+      }
+      zi = (zi + 1) % zs.length; if (zi === 0 && R() < .5) break;
+    }
+    if (R() < .12) push(sid, vid, t + 20000, 'list_open');
+    if (cart.length){ push(sid, vid, tt + 3000, 'cart_open', { value:cart.length });
+      if (R() < .5){ const v = cart.reduce((a, h) => a + ((CATALOG[h] || {}).price || 0), 0); push(sid, vid, tt + 9000, 'checkout_click', { value:v, props:{ items:cart.length, handles:cart } }); } }
+    if (!live) push(sid, vid, Math.max(tt, end) + 1000, 'session_end');
+  };
+  for (let day = 13; day >= 0; day--){
+    const n = Math.round((14 + (13 - day) * 2.2) * (.7 + R() * .6));
+    for (let i = 0; i < n; i++){
+      const hour = pickW([[8,1],[12,3],[13,2],[18,2],[19,3],[20,4],[21,5],[22,6],[23,5],[0,3],[1,2]]);
+      const dayStart = new Date(jstDay(now - day * 86400000) + 'T00:00:00+09:00').getTime();
+      const t0 = dayStart + (hour * 60 + R() * 60) * 60000;
+      if (t0 > now - 600000) continue; mkSession(t0, false);
+    }
+  }
+  for (let i = 0; i < 4; i++) mkSession(now - (40 + R() * 200) * 1000, true);
+  return ev.filter(e => new Date(e.ts) <= now).sort((a, b) => a.ts.localeCompare(b.ts));
+}
+
+/* ===== 集計 ===== */
+function sourceOf(p){ if (!p) return '(direct)'; if (p.utm_source) return p.utm_source.toLowerCase(); if (p.ref){ const r = p.ref.replace(/^www\./, ''); if (/google|yahoo|bing/.test(r)) return 'organic_search'; return r; } return '(direct)'; }
+function analyze(all){
+  const ses = new Map();
+  for (const e of all){
+    let s = ses.get(e.session_id);
+    if (!s){ s = { sid:e.session_id, vid:e.visitor_id, start:e.ts, end:e.ts, device:'unknown', source:'(direct)', medium:'', campaign:'', isNew:false,
+      entered:false, enterAt:null, dug:false, digViews:0, opens:0, adds:0, addValue:0, carted:false, checkout:false, checkoutValue:0, methods:new Set(),
+      sound:false, list:false, zones:new Set(), lastPos:null, events:[] }; ses.set(e.session_id, s); }
+    s.events.push(e); if (e.ts > s.end) s.end = e.ts; if (e.ts < s.start) s.start = e.ts;
+    switch (e.type){
+      case 'session_start': { const p = e.props || {}; s.device = p.device || 'unknown'; s.source = sourceOf(p); s.medium = p.utm_medium || (p.ref ? 'referral' : ''); s.campaign = p.utm_campaign || ''; s.isNew = !!p.new_visitor; break; }
+      case 'enter': s.entered = true; s.enterAt = e.ts; break;
+      case 'dig_enter': s.dug = true; if (e.zone) s.zones.add(e.zone); break;
+      case 'dig_view': s.dug = true; s.digViews++; break;
+      case 'product_open': s.opens++; break;
+      case 'add_to_cart': s.adds++; s.carted = true; s.addValue += +e.value || 0; break;
+      case 'checkout_click': s.checkout = true; s.checkoutValue += +e.value || 0; break;
+      case 'move_method': if (e.props && e.props.m) s.methods.add(e.props.m); break;
+      case 'sound': if (+e.value === 1) s.sound = true; break;
+      case 'list_open': s.list = true; break;
+      case 'pos': s.lastPos = e; break;
+    }
+  }
+  for (const s of ses.values()){ s.dur = Math.max(0, (new Date(s.end) - new Date(s.enterAt || s.start)) / 1000); }
+  return ses;
+}
+function filtered(){
+  const ses = analyze(RAW);
+  const keep = new Set([...ses.values()].filter(s => (!st.device || s.device === st.device) && (!st.source || s.source === st.source)).map(s => s.sid));
+  return { ses:[...ses.values()].filter(s => keep.has(s.sid)), events:RAW.filter(e => keep.has(e.session_id)), allSes:ses };
+}
+
+/* ===== 描画部品 ===== */
+const tt = $('#tt');
+function showTT(html, e){ tt.innerHTML = html; tt.style.display = 'block'; const x = Math.min(e.clientX + 14, innerWidth - tt.offsetWidth - 8), y = Math.min(e.clientY + 14, innerHeight - tt.offsetHeight - 8); tt.style.left = x + 'px'; tt.style.top = y + 'px'; }
+function hideTT(){ tt.style.display = 'none'; }
+function bindTT(root){ root.querySelectorAll('[data-tt]').forEach(n => { n.addEventListener('mousemove', e => showTT(n.getAttribute('data-tt'), e)); n.addEventListener('mouseleave', hideTT); }); }
+function kpis(el, list){ el.innerHTML = list.map(k => `<div class="kpi"><div class="l">${k.l}</div><div class="v${k.sm ? ' sm' : ''}">${k.v}${k.u ? `<small>${k.u}</small>` : ''}</div>${k.d ? `<div class="d">${k.d}</div>` : ''}</div>`).join(''); }
+function barsH(el, rows, { fmt = fnum, color = S[0], max } = {}){
+  if (!rows.length){ el.innerHTML = '<div class="empty">データなし</div>'; return; }
+  const W = 400, rowH = 26, labW = 128, valW = 64, H = rows.length * rowH;
+  const mx = max ?? Math.max(...rows.map(r => r.value), 1);
+  let g = '';
+  rows.forEach((r, i) => {
+    const y = i * rowH, w = Math.max(r.value > 0 ? 3 : 0, (W - labW - valW) * r.value / mx);
+    g += `<g data-tt="${esc(`<b>${r.label}</b><br>${r.tip || fmt(r.value)}`)}"><rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent"/>
+      <text x="0" y="${y + 17}" fill="var(--text-secondary)" font-size="11">${esc(r.label.length > 18 ? r.label.slice(0, 17) + '…' : r.label)}</text>
+      <rect x="${labW}" y="${y + 7}" width="${w}" height="12" rx="4" fill="${r.color || color}"/>
+      <text x="${W}" y="${y + 17}" fill="var(--text-primary)" font-size="11" text-anchor="end" font-family="Space Mono">${esc(r.text ?? fmt(r.value))}</text></g>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}">${g}</svg>`; bindTT(el);
+}
+function columns(el, labels, values, { fmt = fnum, color = S[0], tip } = {}){
+  const W = 520, H = 170, pb = 22, pt = 8, n = labels.length, gap = 2, bw = (W - gap * (n - 1)) / n;
+  const mx = Math.max(...values, 1); let g = '';
+  for (let k = 0; k <= 2; k++){ const y = pt + (H - pb - pt) * k / 2; g += `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/>`; }
+  values.forEach((v, i) => { const h = (H - pb - pt) * v / mx, x = i * (bw + gap), y = H - pb - h;
+    g += `<g data-tt="${esc(`<b>${labels[i]}</b><br>${tip ? tip(i) : fmt(v)}`)}"><rect x="${x}" y="${pt}" width="${bw}" height="${H - pb - pt}" fill="transparent"/>
+      ${v > 0 ? `<path d="M${x},${H - pb} V${y + Math.min(4, h)} q0,-4 4,-4 h${Math.max(0, bw - 8)} q4,0 4,4 V${H - pb} Z" fill="${color}"/>` : ''}</g>`;
+    if (n <= 12 || i % Math.ceil(n / 12) === 0) g += `<text x="${x + bw / 2}" y="${H - 6}" fill="var(--text-muted)" font-size="10" text-anchor="middle">${esc(labels[i])}</text>`; });
+  g += `<text x="0" y="${pt - 1}" fill="var(--text-muted)" font-size="9" font-family="Space Mono">${fmt(mx)}</text>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}">${g}</svg>`; bindTT(el);
+}
+function line(el, labels, values, { fmt = fnum, color = S[0], name = '' } = {}){
+  const W = 520, H = 170, pb = 22, pt = 10, n = labels.length;
+  if (!n){ el.innerHTML = '<div class="empty">データなし</div>'; return; }
+  const mx = Math.max(...values, 1) * 1.1, X = i => n === 1 ? W / 2 : i * W / (n - 1), Y = v => H - pb - (H - pb - pt) * v / mx;
+  let g = '';
+  for (let k = 0; k <= 2; k++){ const y = pt + (H - pb - pt) * k / 2; g += `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="0" y="${y - 3}" fill="var(--text-muted)" font-size="9" font-family="Space Mono">${fmt(mx * (1 - k / 2))}</text>`; }
+  g += `<path d="${values.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  labels.forEach((l, i) => { if (n <= 10 || i % Math.ceil(n / 8) === 0 || i === n - 1) g += `<text x="${X(i)}" y="${H - 6}" fill="var(--text-muted)" font-size="10" text-anchor="middle">${esc(l)}</text>`; });
+  g += `<line id="xh" x1="0" x2="0" y1="${pt}" y2="${H - pb}" stroke="var(--text-muted)" stroke-dasharray="3 3" opacity="0"/><circle id="xd" r="4" fill="${color}" stroke="var(--surface-1)" stroke-width="2" opacity="0"/>`;
+  g += `<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" id="hit"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}">${g}</svg>`;
+  const svg = el.querySelector('svg'), hit = el.querySelector('#hit'), xh = el.querySelector('#xh'), xd = el.querySelector('#xd');
+  hit.addEventListener('mousemove', e => { const r = svg.getBoundingClientRect(); const i = Math.max(0, Math.min(n - 1, Math.round((e.clientX - r.left) / r.width * (n - 1))));
+    xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('opacity', 1); xd.setAttribute('cx', X(i)); xd.setAttribute('cy', Y(values[i])); xd.setAttribute('opacity', 1);
+    showTT(`<b>${labels[i]}</b><br>${name ? name + '：' : ''}${fmt(values[i])}`, e); });
+  hit.addEventListener('mouseleave', () => { xh.setAttribute('opacity', 0); xd.setAttribute('opacity', 0); hideTT(); });
+}
+function table(el, id, cols, rows, { onRow, defaultSort } = {}){
+  const s = st.sort[id] || defaultSort || { k:cols[1].k, dir:-1 };
+  const sorted = rows.slice().sort((a, b) => { const x = a[s.k], y = b[s.k]; return (typeof x === 'string' ? x.localeCompare(y) : (x - y)) * s.dir; });
+  if (!rows.length){ el.innerHTML = '<tr><td class="empty">データなし</td></tr>'; return; }
+  el.innerHTML = `<thead><tr>${cols.map(c => `<th data-k="${c.k}" class="${s.k === c.k ? 'sorted' : ''}">${c.l}${s.k === c.k ? (s.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`).join('')}</tr></thead>
+    <tbody>${sorted.map((r, i) => `<tr class="${onRow ? 'click' : ''}" data-i="${rows.indexOf(r)}">${cols.map(c => `<td class="${c.cls || ''}">${c.f ? c.f(r[c.k], r) : esc(r[c.k])}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  el.querySelectorAll('th').forEach(th => th.onclick = () => { const k = th.dataset.k; st.sort[id] = { k, dir:s.k === k ? -s.dir : -1 }; table(el, id, cols, rows, { onRow, defaultSort }); });
+  if (onRow) el.querySelectorAll('tbody tr').forEach(tr => tr.onclick = () => onRow(rows[+tr.dataset.i]));
+}
+
+/* ===== 店内マップ ===== */
+function drawMap(events, ses){
+  const c = $('#map'), dpr = devicePixelRatio || 1, W = c.clientWidth, H = Math.round(W * 0.2);
+  c.width = W * dpr; c.height = H * dpr; c.style.height = H + 'px';
+  const g = c.getContext('2d'); g.scale(dpr, dpr);
+  const P = 8, X = z => P + (15 - z) / 30 * (W - P * 2), Y = x => P + (x + 3.3) / 3.9 * (H - P * 2);
+  g.fillStyle = '#101116'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#1f305d'; g.fillRect(X(15), Y(-3.3), X(-15) - X(15), Y(-2.9) - Y(-3.3));
+  g.fillStyle = '#e8c22a'; g.fillRect(X(15), Y(.08), X(-15) - X(15), 2);
+  if (st.map === 'heat'){
+    const cw = .5, ch = .25, cols = Math.ceil(30 / cw), rows = Math.ceil(3.9 / ch), grid = new Float32Array(cols * rows);
+    for (const e of events){ if (e.type !== 'pos' || e.x == null) continue; const ci = Math.floor((15 - e.z) / cw), ri = Math.floor((e.x + 3.3) / ch); if (ci >= 0 && ci < cols && ri >= 0 && ri < rows) grid[ri * cols + ci]++; }
+    const mx = Math.max(...grid, 1);
+    const ramp = ['#104281','#184f95','#256abf','#3987e5','#6da7ec','#9ec5f4','#cde2fb'];
+    for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++){ const v = grid[r * cols + k]; if (!v) continue; const t = Math.sqrt(v / mx);
+      g.globalAlpha = .35 + .6 * t; g.fillStyle = ramp[Math.min(ramp.length - 1, Math.floor(t * ramp.length))];
+      g.fillRect(X(15 - k * cw) + .5, Y(-3.3 + r * ch) + .5, X(15 - (k + 1) * cw) - X(15 - k * cw) - 1, Y(-3.3 + (r + 1) * ch) - Y(-3.3 + r * ch) - 1); }
+    g.globalAlpha = 1;
+    $('#mapLegend').innerHTML = `<span>少ない</span>${['#104281','#256abf','#6da7ec','#cde2fb'].map(c => `<i style="background:${c}"></i>`).join('')}<span>多い</span><span style="margin-left:auto">左＝入口 → 右＝トンネル</span>`;
+  }
+  for (const z of ZONES){ g.strokeStyle = 'rgba(240,239,236,.55)'; g.lineWidth = 1; const x0 = X(z.z + z.d / 2), x1 = X(z.z - z.d / 2), y0 = Y(z.x - z.w / 2), y1 = Y(z.x + z.w / 2);
+    g.strokeRect(x0, y0, x1 - x0, y1 - y0); g.fillStyle = 'rgba(240,239,236,.75)'; g.font = '10px "Space Mono", monospace'; g.fillText(z.id, x0 + 3, y0 + 11); }
+  if (st.map === 'live'){
+    const now = new Date(); const live = ses.filter(s => s.lastPos && now - new Date(s.lastPos.ts) < 60000);
+    for (const s of live){ const p = s.lastPos; g.fillStyle = s.device === 'mobile' ? S[2] : S[0]; g.beginPath(); g.arc(X(p.z), Y(p.x), 5, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#15161b'; g.lineWidth = 2; g.stroke(); }
+    $('#mapLegend').innerHTML = `<span><i style="background:${S[2]};border-radius:50%"></i>スマホ</span><span><i style="background:${S[0]};border-radius:50%"></i>PC</span><span>直近60秒に動いた人：${live.length}人</span><span style="margin-left:auto">左＝入口 → 右＝トンネル</span>`;
+  }
+}
+
+/* ===== 各タブ ===== */
+function renderPlay(F){
+  const { ses, events } = F, entered = ses.filter(s => s.entered);
+  const now = new Date();
+  const live = ses.filter(s => s.lastPos && now - new Date(s.lastPos.ts) < 60000).length;
+  const avgDur = entered.length ? entered.reduce((a, s) => a + s.dur, 0) / entered.length : 0;
+  const median = entered.length ? entered.map(s => s.dur).sort((a, b) => a - b)[Math.floor(entered.length / 2)] : 0;
+  const digs = entered.reduce((a, s) => a + s.digViews, 0);
+  const visitors = new Set(ses.map(s => s.vid)).size;
+  kpis($('#playKpis'), [
+    { l:'いま店内', v:live, u:'人', d:'直近60秒に動いた人' },
+    { l:'来訪', v:fnum(ses.length), u:'回', d:`ユニーク ${fnum(visitors)}人` },
+    { l:'入店率', v:fp(pct(entered.length, ses.length)), d:'ENTERを押した割合' },
+    { l:'平均プレイ時間', v:fdur(avgDur), d:`中央値 ${fdur(median)}` },
+    { l:'1人あたりディグ', v:(entered.length ? digs / entered.length : 0).toFixed(1), u:'着', d:`合計 ${fnum(digs)}着めくられた` },
+    { l:'リピーター', v:fp(pct(ses.filter(s => !s.isNew).length, ses.length)), d:'前にも来たことがある人' },
+  ]);
+  drawMap(events, ses);
+  // 売り場滞在
+  const dwell = {}; for (const e of events) if (e.type === 'pos') dwell[e.zone || 'AISLE'] = (dwell[e.zone || 'AISLE'] || 0) + HB;
+  const visitorsByZone = {}; for (const s of ses) for (const e of s.events) if (e.type === 'pos'){ (visitorsByZone[e.zone] ||= new Set()).add(s.sid); }
+  barsH($('#zoneDwell'), [...ZONES.map(z => z.id), 'AISLE'].map((id, i) => ({ label:ZLABEL[id], value:(dwell[id] || 0) / 60, color:id === 'AISLE' ? 'var(--text-muted)' : S[0],
+    tip:`合計 ${fdur(dwell[id] || 0)}<br>立ち寄った人 ${fnum((visitorsByZone[id] || new Set()).size)}人<br>1人あたり ${fdur((dwell[id] || 0) / Math.max(1, (visitorsByZone[id] || new Set()).size))}` })),
+    { fmt:v => v.toFixed(1) + '分' });
+  // プレイ時間分布
+  const bins = [[0,30,'〜30秒'],[30,60,'〜1分'],[60,120,'〜2分'],[120,300,'〜5分'],[300,600,'〜10分'],[600,1e9,'10分〜']];
+  const cnt = bins.map(b => entered.filter(s => s.dur >= b[0] && s.dur < b[1]).length);
+  columns($('#durHist'), bins.map(b => b[2]), cnt, { tip:i => `${cnt[i]}人（${fp(pct(cnt[i], entered.length))}）` });
+  // 移動方法
+  const mc = {}; for (const s of entered) for (const m of s.methods) mc[m] = (mc[m] || 0) + 1;
+  barsH($('#moveMethods'), Object.keys(MOVE_LABEL).filter(k => mc[k]).sort((a, b) => mc[b] - mc[a]).map(k => ({ label:MOVE_LABEL[k], value:pct(mc[k], entered.length), tip:`${mc[k]}人（${fp(pct(mc[k], entered.length))}）` })),
+    { fmt:fp, max:100, color:S[2] });
+  // 遊び方
+  const b = [
+    ['ディグした', entered.filter(s => s.dug).length], ['3売り場以上まわった', entered.filter(s => s.zones.size >= 3).length], ['商品の詳細を見た', entered.filter(s => s.opens > 0).length],
+    ['一覧（LIST）を開いた', entered.filter(s => s.list).length], ['サウンドをONにした', entered.filter(s => s.sound).length] ];
+  barsH($('#behaviors'), b.map(([l, v]) => ({ label:l, value:pct(v, entered.length), tip:`${v}人（${fp(pct(v, entered.length))}）` })), { fmt:fp, max:100, color:S[2] });
+  // プレイヤー
+  const rows = ses.slice().sort((a, b) => b.start.localeCompare(a.start)).slice(0, 300).map(s => ({ s, start:s.start, when:jstTime(s.start), device:s.device === 'mobile' ? 'スマホ' : s.device === 'desktop' ? 'PC' : '—',
+    source:s.source, dur:s.entered ? s.dur : 0, digs:s.digViews, zones:s.zones.size, cart:s.adds, checkout:s.checkout ? 1 : 0 }));
+  table($('#players'), 'players', [
+    { k:'start', l:'開始', f:(v, r) => r.when }, { k:'device', l:'端末' }, { k:'source', l:'流入元', cls:'name' },
+    { k:'dur', l:'プレイ', f:(v, r) => r.s.entered ? fdur(v) : '<span class="pill">入店せず</span>' }, { k:'digs', l:'ディグ', f:fnum }, { k:'zones', l:'売り場' }, { k:'cart', l:'カート' },
+    { k:'checkout', l:'レジ', f:v => v ? '<span class="pill ok">到達</span>' : '' } ], rows, { defaultSort:{ k:'start', dir:-1 }, onRow:r => showTimeline(r.s) });
+  if (st.player){ const s = ses.find(x => x.sid === st.player); if (s) showTimeline(s); }
+}
+const EV_LABEL = { session_start:'来訪', enter:'入店', move_method:'移動方法', nav:'売り場ボタン', dig_enter:'ディグ開始', dig_view:'めくった', dig_exit:'ディグ終了', product_open:'詳細を開いた',
+  size_select:'サイズ選択', photo_next:'写真を切り替え', product_page_click:'商品ページへ', add_to_cart:'カートに入れた', remove_from_cart:'カートから削除', cart_open:'カートを開いた',
+  checkout_click:'レジへ進んだ', list_open:'一覧を開いた', list_pick:'一覧から選んだ', sound:'サウンド', session_end:'離脱' };
+function showTimeline(s){
+  st.player = s.sid;
+  $('#tlTitle').innerHTML = `行動ログ <small>${esc(jstTime(s.start))}・${s.device === 'mobile' ? 'スマホ' : 'PC'}・${esc(s.source)}</small>`;
+  const t0 = new Date(s.start); const evs = s.events.filter(e => e.type !== 'pos');
+  const posN = s.events.length - evs.length;
+  $('#timeline').innerHTML = evs.map(e => { const dt = (new Date(e.ts) - t0) / 1000; const it = e.handle && CATALOG[e.handle];
+    let d = it ? it.title : (e.zone ? ZLABEL[e.zone] || e.zone : '');
+    if (e.type === 'move_method') d = MOVE_LABEL[e.props && e.props.m] || ''; if (e.type === 'session_start') d = `${s.source}${s.campaign ? ' / ' + s.campaign : ''}`;
+    if (e.type === 'add_to_cart' || e.type === 'checkout_click') d += `　${yen(e.value || 0)}`; if (e.type === 'sound') d = +e.value ? 'ON' : 'OFF';
+    return `<div><span>+${fdur(dt)}</span><span>${EV_LABEL[e.type] || e.type}</span><span>${esc(d)}</span></div>`; }).join('') + `<div><span></span><span>現在地の記録</span><span>${posN}回（約${fdur(posN * HB)}分の動線）</span></div>`;
+}
+function funnelSteps(ses){
+  return [ ['来訪', ses.length], ['入店', ses.filter(s => s.entered).length], ['ディグ', ses.filter(s => s.dug).length], ['詳細を見た', ses.filter(s => s.opens > 0).length],
+    ['カートに入れた', ses.filter(s => s.carted).length], ['レジへ進んだ', ses.filter(s => s.checkout).length] ];
+}
+function groupRows(ses, keyFn){
+  const m = new Map(); for (const s of ses){ const k = keyFn(s) || '(なし)'; if (!m.has(k)) m.set(k, []); m.get(k).push(s); }
+  return [...m.entries()].map(([k, l]) => { const ent = l.filter(s => s.entered); return { k, sessions:l.length, enter:pct(ent.length, l.length), dur:ent.length ? ent.reduce((a, s) => a + s.dur, 0) / ent.length : 0,
+    dig:pct(l.filter(s => s.dug).length, l.length), cart:pct(l.filter(s => s.carted).length, l.length), cvr:pct(l.filter(s => s.checkout).length, l.length),
+    checkouts:l.filter(s => s.checkout).length, revenue:l.reduce((a, s) => a + s.checkoutValue, 0) }; });
+}
+const GROUP_COLS = first => [ { k:'k', l:first, cls:'name' }, { k:'sessions', l:'来訪', f:fnum }, { k:'enter', l:'入店率', f:fp }, { k:'dur', l:'平均プレイ', f:fdur },
+  { k:'dig', l:'ディグ率', f:fp }, { k:'cart', l:'カート率', f:fp }, { k:'cvr', l:'CVR', f:fp }, { k:'checkouts', l:'レジ', f:fnum }, { k:'revenue', l:'想定売上', f:yen } ];
+function renderMkt(F){
+  const { ses } = F, f = funnelSteps(ses), entered = ses.filter(s => s.entered);
+  const rev = ses.reduce((a, s) => a + s.checkoutValue, 0), co = ses.filter(s => s.checkout).length;
+  kpis($('#mktKpis'), [
+    { l:'来訪', v:fnum(ses.length), u:'回', d:`ユニーク ${fnum(new Set(ses.map(s => s.vid)).size)}人` },
+    { l:'入店率', v:fp(pct(f[1][1], f[0][1])) },
+    { l:'カート投入率', v:fp(pct(f[4][1], f[0][1])), d:'来訪に対して' },
+    { l:'CVR（レジ到達）', v:fp(pct(co, ses.length)), d:`${fnum(co)}回レジへ` },
+    { l:'想定売上', v:yen(rev), d:`客単価 ${co ? yen(rev / co) : '—'}` },
+    { l:'平均プレイ時間', v:fdur(entered.length ? entered.reduce((a, s) => a + s.dur, 0) / entered.length : 0), d:'入店した人' },
+  ]);
+  barsH($('#funnel'), f.map(([l, v], i) => ({ label:l, value:v, text:`${fnum(v)}　${i ? fp(pct(v, f[0][1])) : ''}`, tip:`${fnum(v)}<br>来訪から ${fp(pct(v, f[0][1]))}${i ? `<br>前の段階から ${fp(pct(v, f[i - 1][1]))}` : ''}` })), { color:S[0] });
+  // 日別
+  const [from, to] = rangeBounds(); const days = []; for (let t = +from; t < +to; t += 86400000) days.push(jstDay(t)); const uniq = [...new Set(days)];
+  const dS = uniq.map(d => ses.filter(s => jstDay(s.start) === d)); const lab = uniq.map(d => d.slice(5).replace('-', '/'));
+  line($('#dailySessions'), lab, dS.map(l => l.length), { name:'来訪', color:S[0] });
+  line($('#dailyCvr'), lab, dS.map(l => pct(l.filter(s => s.checkout).length, l.length)), { name:'CVR', color:S[1], fmt:fp });
+  const hours = Array.from({ length:24 }, (_, h) => ses.filter(s => jstHour(s.start) === h).length);
+  columns($('#hourly'), hours.map((_, h) => h + '時'), hours, { tip:i => `${hours[i]}回` });
+  table($('#sources'), 'sources', GROUP_COLS('流入元'), groupRows(ses, s => s.source), { defaultSort:{ k:'sessions', dir:-1 } });
+  table($('#campaigns'), 'campaigns', GROUP_COLS('キャンペーン'), groupRows(ses.filter(s => s.campaign), s => s.campaign), { defaultSort:{ k:'sessions', dir:-1 } });
+  table($('#devices'), 'devices', GROUP_COLS('端末'), groupRows(ses, s => s.device === 'mobile' ? 'スマホ' : s.device === 'desktop' ? 'PC' : '不明'), { defaultSort:{ k:'sessions', dir:-1 } });
+}
+function renderItems(F){
+  const { events } = F, m = {};
+  const get = h => m[h] ||= { h, views:new Set(), opens:new Set(), adds:0, addSes:new Set(), checkouts:0, zone:'' };
+  for (const e of events){ if (!e.handle && e.type !== 'checkout_click') continue;
+    if (e.type === 'dig_view'){ const r = get(e.handle); r.views.add(e.session_id); r.zone = e.zone || r.zone; r.viewCount = (r.viewCount || 0) + 1; }
+    if (e.type === 'product_open'){ get(e.handle).opens.add(e.session_id); }
+    if (e.type === 'add_to_cart'){ const r = get(e.handle); r.adds++; r.addSes.add(e.session_id); }
+    if (e.type === 'checkout_click' && e.props && e.props.handles) for (const h of e.props.handles) get(h).checkouts++; }
+  const rows = Object.values(m).map(r => { const c = CATALOG[r.h] || {}; return { h:r.h, name:c.title || r.h, zone:ZLABEL[r.zone] || '', available:c.available ? 1 : 0, price:c.price || 0,
+    views:r.viewCount || 0, viewers:r.views.size, opens:r.opens.size, adds:r.adds, checkouts:r.checkouts, openRate:pct(r.opens.size, r.views.size), cartRate:pct(r.addSes.size, r.opens.size) }; });
+  const totalViews = rows.reduce((a, r) => a + r.views, 0), soldOpens = rows.filter(r => !r.available).reduce((a, r) => a + r.opens, 0);
+  const top = rows.slice().sort((a, b) => b.adds - a.adds)[0];
+  kpis($('#itemKpis'), [
+    { l:'めくられた回数', v:fnum(totalViews), u:'回' },
+    { l:'詳細表示', v:fnum(rows.reduce((a, r) => a + r.opens, 0)), u:'人', d:'商品ごとの人数の合計' },
+    { l:'カート投入', v:fnum(rows.reduce((a, r) => a + r.adds, 0)), u:'点' },
+    { l:'SOLDへの関心', v:fnum(soldOpens), u:'人', d:'売り切れ商品の詳細を見た' },
+    { l:'いちばんカートに入った', sm:true, v:top && top.adds ? esc(top.name) : '—', d:top && top.adds ? `${top.adds}点` : '' },
+  ]);
+  const zv = {}; for (const r of rows) zv[r.zone] = (zv[r.zone] || 0) + r.views;
+  barsH($('#zoneViews'), ZONES.map(z => ({ label:z.label, value:zv[ZLABEL[z.id]] || 0, tip:`${fnum(zv[ZLABEL[z.id]] || 0)}回めくられた` })), { color:S[0] });
+  barsH($('#soldInterest'), rows.filter(r => !r.available).sort((a, b) => b.opens - a.opens).slice(0, 10).map(r => ({ label:r.name.replace(/^TYPE-\d+\s*/, ''), value:r.opens, tip:`${esc(r.name)}<br>詳細 ${r.opens}人・めくった ${r.viewers}人` })), { color:S[1] });
+  table($('#itemsTable'), 'items', [
+    { k:'name', l:'商品', cls:'name', f:(v, r) => `<a href="https://bonknowfreaks.com/products/${encodeURIComponent(r.h)}" target="_blank" rel="noopener" style="color:inherit">${esc(v)}</a>` },
+    { k:'zone', l:'売り場' }, { k:'available', l:'在庫', f:v => v ? '<span class="pill ok">あり</span>' : '<span class="pill sold">SOLD</span>' }, { k:'price', l:'価格', f:yen },
+    { k:'views', l:'めくった', f:fnum }, { k:'opens', l:'詳細', f:fnum }, { k:'openRate', l:'詳細率', f:fp }, { k:'adds', l:'カート', f:fnum }, { k:'cartRate', l:'カート率', f:fp }, { k:'checkouts', l:'レジ', f:fnum } ],
+    rows, { defaultSort:{ k:'views', dir:-1 } });
+}
+
+/* ===== 全体 ===== */
+function render(){
+  const F = filtered();
+  const srcs = [...new Set([...F.allSes.values()].map(s => s.source))].sort();
+  const sel = $('#fSource'); const cur = st.source; sel.innerHTML = '<option value="">すべて</option>' + srcs.map(s => `<option ${s === cur ? 'selected' : ''}>${esc(s)}</option>`).join('');
+  if (st.tab === 'play') renderPlay(F); else if (st.tab === 'mkt') renderMkt(F); else renderItems(F);
+  const now = new Date();
+  const live = F.ses.filter(s => s.lastPos && now - new Date(s.lastPos.ts) < 60000).length;
+  $('#liveTxt').textContent = `いま店内 ${live}人`;
+  $('#updated').textContent = `更新 ${new Date().toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' })}`;
+}
+async function reload(){
+  if (MODE === 'demo'){ RAW = demoEvents().filter(e => { const [f, t] = rangeBounds(); const d = new Date(e.ts); return d >= f && d < t; }); render(); return; }
+  try { RAW = await fetchEvents(); render(); }
+  catch(e){ if (e.message === 'unauthorized'){ sessionStorage.removeItem('bkf_dash'); location.reload(); } else $('#updated').textContent = '読み込みに失敗：' + e.message; }
+}
+async function start(mode){
+  MODE = mode; $('#login').style.display = 'none'; $('#app').style.display = 'block';
+  $('#demoBadge').style.display = mode === 'demo' ? '' : 'none';
+  await loadCatalog(); await reload();
+  if (mode === 'real') setInterval(reload, 30000);
+}
+$$('#tabs .tab').forEach(b => b.onclick = () => { $$('#tabs .tab').forEach(x => x.classList.toggle('on', x === b)); st.tab = b.dataset.tab; $$('section[data-panel]').forEach(s => s.hidden = s.dataset.panel !== st.tab); render(); });
+$$('#range .chip').forEach(b => b.onclick = () => { $$('#range .chip').forEach(x => x.classList.toggle('on', x === b)); st.range = b.dataset.r; reload(); });
+$$('.mapctl .chip').forEach(b => b.onclick = () => { $$('.mapctl .chip').forEach(x => x.classList.toggle('on', x === b)); st.map = b.dataset.m; render(); });
+$('#fDevice').onchange = e => { st.device = e.target.value; render(); };
+$('#fSource').onchange = e => { st.source = e.target.value; render(); };
+$('#refresh').onclick = reload;
+addEventListener('resize', () => { if ($('#app').style.display === 'block' && st.tab === 'play') render(); });
+
+async function tryLogin(k){
+  if (!SUPABASE_URL || !SUPABASE_KEY){ $('#err').textContent = 'まだデータの保存先がつながってないよ（デモデータで見られる）'; return; }
+  KEY = k; $('#err').textContent = '確認中…';
+  try { const [f, t] = rangeBounds(); await fetch(`${SUPABASE_URL}/rest/v1/rpc/dash_events`, { method:'POST', headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+      body:JSON.stringify({ p_key:k, p_from:t.toISOString(), p_to:t.toISOString(), p_after_id:0 }) }).then(async r => { if (!r.ok) throw new Error(await r.text()); });
+    sessionStorage.setItem('bkf_dash', k); $('#err').textContent = ''; start('real'); }
+  catch(e){ $('#err').textContent = /unauthorized/.test(e.message) ? '合言葉がちがうみたい' : '接続できなかった：' + e.message.slice(0, 80); }
+}
+$('#go').onclick = () => tryLogin($('#key').value.trim());
+$('#key').onkeydown = e => { if (e.key === 'Enter') tryLogin($('#key').value.trim()); };
+$('#demo').onclick = () => start('demo');
+if (sessionStorage.getItem('bkf_dash')) tryLogin(sessionStorage.getItem('bkf_dash'));
+if (location.hash === '#demo') start('demo');
+</script>
+</body>
+</html>
