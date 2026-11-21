@@ -777,7 +777,7 @@ function addLookPanels(){
 }
 
 /* ===== Blenderの作り方で起こした服の3Dモデル（B）＋ アウターは商品写真の柄（C） ===== */
-const GARMENT_GLB = 'assets/garments.glb?v=3';
+const GARMENT_GLB = 'assets/garments.glb?v=4';
 const PHOTO_TEX = new Set(['type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-red','type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-black','type-006-bomber-armor-black','type-006-bomber-armor-olive','type-001-sweat-trucker-jacket-fadedyellow','type-001-sweat-trucker-jacket-ashgray','type-001-sweat-trucker-jacket-washedblack','faded-corduroy-w-tailor-riders-docking-jacket-black','type-001-sweat-trucker-jacket-1','type-001-sweat-trucker-jacket']);
 const photoTexCache = {};
 let GX = null, clothTex = null;
@@ -791,7 +791,7 @@ function photoTex(handle){
 async function loadGarments(){
   const gltf = await new GLTFLoader().loadAsync(GARMENT_GLB);
   GX = {};
-  gltf.scene.traverse(o => { if (o.isMesh && /^GX_/.test(o.name)){ o.updateWorldMatrix(true,false); const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!g.attributes.normal) g.computeVertexNormals(); g.computeBoundingSphere(); GX[o.name.slice(3)] = g; } });
+  gltf.scene.traverse(o => { if (o.isMesh && /^GX_/.test(o.name)){ o.updateWorldMatrix(true,false); const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!g.attributes.normal) g.computeVertexNormals(); { const n = g.attributes.normal.array; for (let i=0;i<n.length;i+=3){ const l = Math.hypot(n[i],n[i+1],n[i+2]); if (!(l > 1e-6)){ n[i]=0; n[i+1]=1; n[i+2]=0; } else { n[i]/=l; n[i+1]/=l; n[i+2]/=l; } } } g.computeBoundingSphere(); GX[o.name.slice(3)] = g; } });
   clothTex = fabricTex(); clothTex.repeat.set(7, 7);
   for (const slot of ALL_SLOTS){
     const s = state.slots[slot]; if (!s) continue;
@@ -804,6 +804,11 @@ async function loadGarments(){
       const bag = new THREE.Mesh(GX.bag, s.mats[0]); bag.position.set(0, .17, 0); bag.rotation.y = -.25; bag.visible = false;
       bag.userData.slot = slot; interactables.push(bag); s.group.add(bag); s.bag = bag;
     }
+  }
+  // ラックごとのスポットライト（服を店頭らしく照らす）
+  for (const r of RACKS){
+    const sp = new THREE.SpotLight(0xffe2c2, 9, 6.5, .62, .75, 1.4);
+    sp.position.set(-.9, 3.35, r.z); sp.target.position.set(-2.55, .95, r.z); scene.add(sp, sp.target);
   }
   state.garments3d = true;
   applyItems();
