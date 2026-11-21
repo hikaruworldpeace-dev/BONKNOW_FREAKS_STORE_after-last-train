@@ -175,6 +175,9 @@ body.digging #backBtn{display:flex}
 #panel .grab{display:none}
 @media (max-width:640px){ #panel .grab{display:block;position:absolute;top:6px;left:50%;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:rgba(255,255,255,.35);z-index:3} #backBtn{top:54px;left:10px} }
 #err{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:#05060a;padding:30px;text-align:center;line-height:1.8}
+#app::after{content:'';position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity 1.2s;
+  background:radial-gradient(ellipse 75% 70% at 50% 48%,transparent 55%,rgba(4,4,8,.55) 100%);}
+body.cine #app::after{opacity:1}
 </style>
 </head>
 <body>
@@ -711,7 +714,7 @@ function build(){
 
 /* ===== Blenderで作った駅（光を焼き込み済み）を読み込む ===== */
 const ENV = [];
-const STATION_GLB = 'assets/station_baked.glb?v=1';
+const STATION_GLB = 'assets/station_baked.glb?v=2';
 async function loadStation(onProgress){
   const draco = new DRACOLoader(); draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/');
   const loader = new GLTFLoader(); loader.setDRACOLoader(draco);
@@ -726,7 +729,9 @@ async function loadStation(onProgress){
   scene.add(root);
   for (const m of ENV) m.removeFromParent();
   renderer.toneMapping = THREE.NoToneMapping;            // 焼き込んだ色をそのまま出す
-  scene.traverse(o => { if (o.isPointLight && o.distance === 0) o.intensity *= .7; });
+  scene.traverse(o => { if (o.isPointLight && o.distance === 0) o.intensity *= .55; });
+  scene.traverse(o => { if (o.isHemisphereLight) o.intensity *= .75; });
+  document.body.classList.add('cine');
   if (hanger){
     hanger.position.set(0, 0, 0); hanger.rotation.set(0, 0, 0); hanger.scale.set(1, 1, 1);
     for (const slot of animated){ const sl = state.slots[slot]; if (sl.type !== 'hang') continue;
