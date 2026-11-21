@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>BONKNOW FREAKS — AFTER LAST TRAIN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Noto+Sans+JP:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#e32017;--blue:#0019a8;--cyan:#00e5ff;--amber:#ffb000;--ink:#0a0b10;--paper:#f2efe6;--mono:'Space Mono',ui-monospace,monospace;--head:'Archivo Black','Noto Sans JP',sans-serif;--body:'Noto Sans JP',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#05060a;color:var(--paper);font-family:var(--body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#app,#app canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.hud{position:fixed;z-index:5;pointer-events:none}
+.hud>*{pointer-events:auto}
+#brand{top:16px;left:18px;pointer-events:none}
+#brand .t{font-family:var(--head);font-size:18px;letter-spacing:.04em;line-height:1}
+#brand .s{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--cyan);margin-top:5px}
+#brand .demo{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:9px;letter-spacing:.2em;padding:2px 6px;border:1px solid rgba(255,255,255,.35);color:rgba(255,255,255,.7)}
+#tools{top:14px;right:14px;display:flex;gap:8px}
+.btn{font-family:var(--mono);font-size:11px;letter-spacing:.14em;padding:9px 12px;background:rgba(10,11,16,.72);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:2px;transition:border-color .2s,background .2s}
+.btn:hover{border-color:var(--cyan)}
+.btn.on{border-color:var(--cyan);color:var(--cyan)}
+#cartBtn b{display:inline-block;min-width:18px;margin-left:6px;padding:0 4px;background:var(--red);color:#fff;border-radius:9px;text-align:center}
+#nav{left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:6px;max-width:calc(100vw - 24px);overflow-x:auto;scrollbar-width:none;padding:2px}
+#nav::-webkit-scrollbar{display:none}
+#nav .btn{white-space:nowrap;padding:8px 11px}
+#nav .btn small{color:rgba(255,255,255,.5);margin-right:6px}
+#hint{left:18px;bottom:66px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:rgba(255,255,255,.55);line-height:1.8;pointer-events:none}
+#tip{position:fixed;z-index:6;pointer-events:none;padding:7px 10px;background:rgba(10,11,16,.85);border-left:2px solid var(--cyan);font-size:12px;line-height:1.5;transform:translate(14px,14px);display:none;max-width:240px}
+#tip .p{font-family:var(--mono);color:var(--amber);font-size:11px}
+#joy{position:fixed;width:120px;height:120px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:radial-gradient(circle,rgba(0,229,255,.06),rgba(10,11,16,.4));z-index:4;display:none;pointer-events:none}
+#joy.on{display:block}
+#joy i{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(255,255,255,.22);border:1.5px solid rgba(0,229,255,.8);box-shadow:0 0 18px rgba(0,229,255,.35)}
+#map{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:62px;width:min(440px,calc(100vw - 24px));height:54px;border:1px solid rgba(255,255,255,.15);border-radius:3px;cursor:pointer;touch-action:manipulation}
+body.touch #nav,body.touch #hint{display:none}
+body.touch #map{bottom:calc(12px + env(safe-area-inset-bottom));height:58px}
+body.digging #map,body.digging #nav,body.digging #hint{display:none}
+#dig{position:fixed;z-index:8;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));width:min(520px,calc(100vw - 20px));transform:translate(-50%,150%);transition:transform .35s cubic-bezier(.2,.8,.2,1);background:rgba(10,11,16,.9);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:6px;padding:12px 12px 12px}
+#dig.show{transform:translate(-50%,0)}
+#dig.bump{animation:bump .3s}
+@keyframes bump{25%{margin-left:-8px}75%{margin-left:8px}}
+#dig .row{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px}
+#dig .arr{height:64px;font-size:26px;border:1px solid rgba(255,255,255,.18);border-radius:4px}
+#dig .arr:disabled{opacity:.25}
+#dig .info{min-width:0;text-align:center}
+#dZone{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--cyan)}
+#dTitle{font-weight:900;font-size:15px;line-height:1.35;margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dPrice{font-family:var(--mono);font-size:13px;color:var(--amber)}
+#dig .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+#dig .acts .cta{padding:12px}
+#dig .acts .ghost{justify-content:center}
+#dig .foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.08em}
+#dExit{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.75);padding:4px 2px}
+#coach{position:fixed;inset:0;z-index:4;pointer-events:none;display:flex;opacity:0;transition:opacity .5s}
+#coach.show{opacity:1}
+#coach div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:13px;font-weight:700;text-shadow:0 1px 6px #000;text-align:center;line-height:1.6}
+#coach div:first-child{flex:.45;background:linear-gradient(90deg,rgba(0,229,255,.10),transparent)}
+#coach div:last-child{flex:.55}
+#coach b{display:block;width:74px;height:74px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.6)}
+#coach .sw{width:90px;height:4px;border-radius:2px;background:linear-gradient(90deg,transparent,#fff,transparent);animation:sw 1.6s infinite}
+@keyframes sw{0%,100%{transform:translateX(-24px)}50%{transform:translateX(24px)}}
+#coach small{display:block;font-weight:400;font-size:11px;opacity:.8}
+body.touch #hint{display:none}
+/* panel */
+#panel{position:fixed;z-index:10;top:0;right:0;height:100%;width:380px;max-width:100%;background:#0d0e14;border-left:1px solid rgba(255,255,255,.1);transform:translateX(105%);transition:transform .35s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}
+#panel.open{transform:none}
+#panel .img{position:relative;aspect-ratio:1/1;background:#e9e6df;flex:none;overflow:hidden}
+#panel .img img{width:100%;height:100%;object-fit:cover;display:block}
+#panel .img .sold{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,11,16,.55);font-family:var(--head);font-size:34px;letter-spacing:.08em;color:#fff}
+#panel.isSold .img .sold{display:flex}
+#panel .close{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;background:rgba(10,11,16,.75);font-size:18px;z-index:2}
+#panel .body{padding:18px 20px 22px;overflow:auto;flex:1}
+#panel .slot{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--cyan)}
+#panel h2{font-size:19px;font-weight:900;line-height:1.4;margin:6px 0 8px}
+#panel .price{font-family:var(--mono);font-size:20px;color:var(--amber)}
+#panel dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:14px 0;font-size:13px}
+#panel dt{color:rgba(255,255,255,.5);font-family:var(--mono);font-size:11px;letter-spacing:.1em;padding-top:2px}
+#panel .sizeLbl{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:rgba(255,255,255,.5);margin:16px 0 8px}
+#panel .sizes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+#panel .size{min-width:48px;padding:9px 10px;border:1px solid rgba(255,255,255,.25);border-radius:2px;font-family:var(--mono);font-size:12px}
+#panel .size.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.08)}
+#panel .size.out{opacity:.35;text-decoration:line-through;cursor:default}
+#panel .img .dots{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-family:var(--mono);font-size:10px;color:rgba(10,11,16,.6)}
+#panel .img img{cursor:pointer}
+#panel .desc{font-size:13px;line-height:1.8;color:rgba(255,255,255,.75)}
+#panel .acts{padding:14px 20px calc(14px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex:none}
+.cta{flex:1;padding:14px;font-weight:700;font-size:14px;background:var(--red);color:#fff;border-radius:2px;letter-spacing:.06em}
+.cta:disabled{background:#3a3b42;color:rgba(255,255,255,.5);cursor:default}
+.ghost{padding:14px 14px;border:1px solid rgba(255,255,255,.25);border-radius:2px;font-size:13px;text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+@media (max-width:640px){
+  #panel{top:auto;bottom:0;height:78%;width:100%;border-left:0;border-top:1px solid rgba(255,255,255,.12);transform:translateY(105%);border-radius:12px 12px 0 0}
+  #panel .img{aspect-ratio:auto;height:38%}
+  #panel .img img{object-fit:contain}
+  #brand{top:12px;left:12px}
+  #brand .t{font-size:12px}
+  #brand .s{font-size:8px;letter-spacing:.2em}
+  #brand .demo{margin-top:5px;font-size:8px}
+  #tools{top:10px;right:10px;gap:5px}
+  #tools .btn{padding:7px 8px;font-size:10px;letter-spacing:.06em}
+  #dig .arr{height:56px}
+}
+/* drawers */
+.sheet{position:fixed;inset:0;z-index:12;background:rgba(5,6,10,.6);display:none}
+.sheet.open{display:block}
+.sheet .in{position:absolute;top:0;right:0;height:100%;width:420px;max-width:100%;background:#0d0e14;border-left:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column}
+.sheet header{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sheet header h3{font-family:var(--head);font-size:16px;letter-spacing:.06em}
+.sheet header button{font-size:20px;width:32px;height:32px}
+.sheet .list{flex:1;overflow:auto;padding:8px 20px}
+.cartRow{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.cartRow img{width:56px;height:70px;object-fit:cover;background:#e9e6df}
+.cartRow .n{font-size:13px;line-height:1.5}
+.cartRow .p{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.cartRow button{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5);text-decoration:underline}
+.sheet footer{padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08)}
+.sum{display:flex;justify-content:space-between;font-family:var(--mono);margin-bottom:12px}
+.note{font-size:11px;line-height:1.7;color:rgba(255,255,255,.55);margin-top:10px}
+.empty{padding:40px 0;text-align:center;color:rgba(255,255,255,.45);font-size:13px}
+#listSheet .in{width:760px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:16px 0}
+.card{text-align:left}
+.card img{width:100%;aspect-ratio:4/5;object-fit:cover;background:#e9e6df;display:block}
+.card .z{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--cyan);margin-top:7px}
+.card .n{font-size:12px;line-height:1.5;margin-top:3px}
+.card .p{font-family:var(--mono);font-size:11px;color:var(--amber)}
+.card.sold img{opacity:.35}
+.filter{display:flex;gap:6px;flex-wrap:wrap;padding-top:12px}
+.filter .btn{padding:6px 9px;font-size:10px}
+/* intro */
+#intro{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(5,6,10,.55),rgba(5,6,10,.92));transition:opacity .6s}
+#intro.hide{opacity:0;pointer-events:none}
+#intro .box{text-align:center;padding:24px;max-width:520px}
+.roundel{width:120px;height:120px;margin:0 auto 26px;position:relative}
+.roundel:before{content:"";position:absolute;inset:0;border-radius:50%;border:20px solid var(--red)}
+.roundel span{position:absolute;left:-30px;right:-30px;top:50%;transform:translateY(-50%);background:var(--blue);font-family:var(--head);font-size:12px;letter-spacing:.06em;padding:6px 0;color:#fff}
+#intro h1{font-family:var(--head);font-size:clamp(30px,7vw,52px);line-height:.95;letter-spacing:.01em}
+#intro .sub{font-family:var(--mono);font-size:11px;letter-spacing:.4em;color:var(--cyan);margin-top:12px}
+#intro .copy{font-size:15px;font-weight:700;margin-top:26px}
+#intro .how{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.6);line-height:1.9;margin-top:16px}
+#enter{margin-top:28px;padding:15px 44px;background:var(--red);color:#fff;font-family:var(--mono);font-weight:700;letter-spacing:.3em;font-size:13px;border-radius:2px}
+#enter:disabled{background:#33343a}
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:15;background:rgba(10,11,16,.85);border:1px solid rgba(255,255,255,.15);padding:10px 16px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+#err{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:#05060a;padding:30px;text-align:center;line-height:1.8}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="brand" class="hud">
+  <div class="t">BONKNOW FREAKS</div>
+  <div class="s">AFTER LAST TRAIN</div>
+  
+</div>
+<div id="tools" class="hud">
+  <button class="btn" id="soundBtn">♪ OFF</button>
+  <button class="btn" id="listBtn">LIST</button>
+  <button class="btn" id="cartBtn">CART<b id="cartCount">0</b></button>
+</div>
+<div id="nav" class="hud"></div>
+<div id="hint" class="hud">WASD / ↑↓ 移動　←→ 振り向き　SHIFT 速歩き<br>ドラッグで見回す　床クリック→歩く　服クリック→ディグ（←→でめくる）</div>
+<div id="joy"><i></i></div>
+<canvas id="map" aria-label="ミニマップ"></canvas>
+<div id="coach"><div><b></b>ここで歩く<small>触れたところにスティックが出る</small></div><div><span class="sw"></span>なぞって見回す<small>床をタップ→そこまで歩く／服をタップ→ディグ</small></div></div>
+<div id="dig">
+  <div class="row">
+    <button class="arr" id="dPrev" aria-label="前の服">‹</button>
+    <div class="info"><div id="dZone"></div><div id="dTitle"></div><div id="dPrice"></div></div>
+    <button class="arr" id="dNext" aria-label="次の服">›</button>
+  </div>
+  <div class="acts"><button class="ghost" id="dOpen">詳細を見る</button><button class="cta" id="dAdd">カートへ</button></div>
+  <div class="foot"><span id="dHint">← → でめくる　ENTER 詳細</span><button id="dExit">↓ もどる</button></div>
+</div>
+<div id="tip"></div>
+<div id="toast"></div>
+
+<aside id="panel" aria-hidden="true">
+  <button class="close" id="panelClose" aria-label="閉じる">×</button>
+  <div class="img"><img id="pImg" alt=""><div class="sold">SOLD OUT</div><div class="dots" id="pDots"></div></div>
+  <div class="body">
+    <div class="slot" id="pSlot"></div>
+    <h2 id="pTitle"></h2>
+    <div class="price" id="pPrice"></div>
+    <div class="sizeLbl">SIZE</div><div class="sizes" id="pSizes"></div>
+    <p class="desc" id="pDesc"></p>
+  </div>
+  <div class="acts">
+    <button class="cta" id="pAdd">カートに入れる</button>
+    <a class="ghost" id="pLink" href="#" target="_blank" rel="noopener" style="display:none">商品ページ ↗</a>
+  </div>
+</aside>
+
+<div class="sheet" id="cartSheet"><div class="in">
+  <header><h3>CART</h3><button data-close>×</button></header>
+  <div class="list" id="cartList"></div>
+  <footer>
+    <div class="sum"><span>小計</span><span id="cartTotal">¥0</span></div>
+    <a class="cta" id="checkout" href="#" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">レジに進む</a>
+    <p class="note" id="cartNote"></p>
+  </footer>
+</div></div>
+
+<div class="sheet" id="listSheet"><div class="in">
+  <header><h3>ALL ITEMS</h3><button data-close>×</button></header>
+  <div class="list"><div class="filter" id="filter"></div><div class="grid" id="grid"></div></div>
+</div></div>
+
+<div id="intro"><div class="box">
+  <div class="roundel"><span>BONKNOW FREAKS</span></div>
+  <h1>AFTER<br>LAST TRAIN</h1>
+  <div class="sub">BONKNOW FREAKS STATION</div>
+  <p class="copy">離れてても、お店で買おう。</p>
+  <p class="how" id="howTo">終電後の駅が、そのまま店になった。<br>ラックを歩いて、服を引き出して、掘ってみて。</p>
+  <button id="enter" disabled>LOADING…</button>
+</div></div>
+<div id="err"></div>
+
+<script type="application/json" id="catalog">[{"h":"type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-red","t":"TYPE-001 Sweat Trucker Jacket SUN FADED - BALANCE Exclusive RED","d":"2026-10-30","v":[[67069438361715,"S",39600,false],[67069438394483,"M",39600,true],[67069438427251,"L",39600,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/ANAphoto_0016.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/ANAphoto_0017.jpg"],"s":"ONLINE 10 pcs only。TYPE-001をベースに複数の染色・加工を重ねたBALANCE別注モデル。"},{"h":"type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-black","t":"TYPE-001 Sweat Trucker Jacket SUN FADED - BALANCE Exclusive BLACK","d":"2026-10-30","v":[[67069415194739,"S",39600,true],[67069415227507,"M",39600,true],[67069415260275,"L",39600,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/ANAphoto_0014.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/ANAphoto_0015.jpg"],"s":"ONLINE 20 pcs only。TYPE-001をベースに複数の染色・加工を重ねたBALANCE別注モデル。"},{"h":"21-00-drop-type-002-giant-pocket-sweat-pants-tribal-charcoal-1","t":"TYPE-002 Giant Pocket Sweat Pants TRIBAL CHARCOAL","d":"2026-10-10","v":[[66832185983091,"M",31900,false],[66832229859443,"L",31900,false],[66832229892211,"XL",31900,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_3960_f0b057a3-f835-40f3-972f-f2277b557d2b.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_3961_d1542e3f-824f-4543-b986-41b122b7983e.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"21-00-drop-type-002-giant-pocket-sweat-pants-tribal-beige","t":"TYPE-002 Giant Pocket Sweat Pants TRIBAL BEIGE","d":"2026-10-10","v":[[66832110649459,"M",30800,false],[66832110682227,"L",30800,false],[66832110714995,"XL",30800,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_3954.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_3955.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"type-004-faded-heavy-sweat-pants-black","t":"TYPE-004 Faded Heavy Sweat Pants BLACK","d":"2026-08-29","v":[[45417868918899,"M",22000,false],[45417868951667,"L",22000,true],[45417868984435,"XL",22000,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1786.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1790.jpg"],"s":"Cotton 100% / 20oz 裏毛。硫化染めとパウダーブリーチでサンフェードを表現。"},{"h":"type-004-faded-heavy-sweat-pants-pink","t":"TYPE-004 Faded Heavy Sweat Pants PINK","d":"2026-08-29","v":[[45417862266995,"M",22000,false],[45417862299763,"L",22000,true],[45417862332531,"XL",22000,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1779.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1780.jpg"],"s":"Cotton 100% / 20oz 裏毛。硫化染めとパウダーブリーチでサンフェードを表現。"},{"h":"type-003-faded-heavy-zip-hoodie-black","t":"TYPE-003 Faded Heavy Zip Hoodie BLACK","d":"2026-08-29","v":[[45417854664819,"M",23100,false],[45417856532595,"L",23100,false],[45417856565363,"XL",23100,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1759.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1769.jpg"],"s":"Cotton 100% / 20oz 裏毛。硫化染めとパウダーブリーチでサンフェードを表現。"},{"h":"type-003-faded-heavy-zip-hoodie-pink","t":"TYPE-003 Faded Heavy Zip Hoodie PINK","d":"2026-08-29","v":[[45417854435443,"M",23100,false],[45417854468211,"L",23100,false],[45417854500979,"XL",23100,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1772.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/20260826_BONKNOWFREAKS_shion1777.jpg"],"s":"Cotton 100% / 20oz 裏毛。硫化染めとパウダーブリーチでサンフェードを表現。"},{"h":"type-002-giant-pocket-sweat-shorts-offwhite","t":"TYPE-002 Giant Pocket Sweat Shorts OFFWHITE","d":"2026-07-22","v":[[45270777790579,"FREE",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9354.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9356.jpg"],"s":"Cotton 100% / 16oz 裏毛。7〜8分丈のスウェットカーゴショーツ。"},{"h":"type-002-giant-pocket-sweat-shorts-navy","t":"TYPE-002 Giant Pocket Sweat Shorts NAVY","d":"2026-07-22","v":[[45270799417459,"FREE",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9359.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_93602.jpg"],"s":"Cotton 100% / 16oz 裏毛。7〜8分丈のスウェットカーゴショーツ。"},{"h":"type-002-giant-pocket-sweat-shorts-black","t":"TYPE-002 Giant Pocket Sweat Shorts BLACK","d":"2026-07-22","v":[[45270796992627,"FREE",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_93492.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9350.jpg"],"s":"Cotton 100% / 16oz 裏毛。7〜8分丈のスウェットカーゴショーツ。"},{"h":"type-002-giant-pocket-sweat-shorts-ashgray","t":"TYPE-002 Giant Pocket Sweat Shorts ASHGRAY","d":"2026-07-22","v":[[45270801186931,"FREE",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9364.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9365.jpg"],"s":"Cotton 100% / 16oz 裏毛。7〜8分丈のスウェットカーゴショーツ。"},{"h":"type-002-giant-pocket-sweat-pants-offwhite","t":"TYPE-002 Giant Pocket Sweat Pants OFFWHITE","d":"2026-06-13","v":[[45098364403827,"M",24200,false],[45098364436595,"L",24200,false],[45098364469363,"XL",24200,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_8015.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_8022.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"dot-intarsia-knit-burgundy","t":"DOT INTARSIA KNIT BURGUNDY","d":"2026-01-02","v":[[44187637612659,"M",25300,true],[44187637645427,"L",25300,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9783.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9785.jpg"],"s":"Cotton 100% / Intarsia。ドット柄のインターシャニット。"},{"h":"dot-intarsia-knit-black","t":"DOT INTARSIA KNIT BLACK","d":"2026-01-02","v":[[44187636695155,"M",25300,true],[44187636727923,"L",25300,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9790.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9792.jpg"],"s":"Cotton 100% / Intarsia。ドット柄のインターシャニット。"},{"h":"dot-intarsia-knit-pants-black","t":"DOT INTARSIA KNIT PANTS BLACK","d":"2026-01-02","v":[[44187642790003,"M",34200,false],[44187642822771,"L",34200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9786.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9788.jpg"],"s":"Cotton 100% / Intarsia。ニットと揃えられるインターシャのパンツ。"},{"h":"dot-intarsia-knit-pants-burgundy","t":"DOT INTARSIA KNIT PANTS BURGUNDY","d":"2026-01-02","v":[[44187643248755,"M",34200,false],[44187643281523,"L",34200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9779.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9781.jpg"],"s":"Cotton 100% / Intarsia。ニットと揃えられるインターシャのパンツ。"},{"h":"type-006-bomber-armor-black","t":"TYPE-006 BOMBER ARMOR BLACK","d":"2025-12-20","v":[[44170743513203,"M",40800,true],[44170743545971,"L",40800,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9761.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9766.jpg"],"s":"Shell: Cotton 100% / 15oz 裏毛。中綿とフェイクファー付きのボンバー。"},{"h":"type-006-bomber-armor-olive","t":"TYPE-006 BOMBER ARMOR OLIVE","d":"2025-12-20","v":[[44170745872499,"M",40800,false],[44170745905267,"L",40800,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9770_cee18049-ab44-437d-bd45-434334088ded.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_9775_6f4adfde-b8bb-45ad-9725-92689e1cc728.jpg"],"s":"Shell: Cotton 100% / 15oz 裏毛。中綿とフェイクファー付きのボンバー。"},{"h":"type-001-sweat-trucker-jacket-fadedyellow","t":"TYPE-001 Sweat Trucker Jacket FADEDYELLOW","d":"2025-09-29","v":[[43942305857651,"S",25300,false],[43942305890419,"M",25300,true],[43942305923187,"L",25300,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/001_5.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/001_6.jpg"],"s":"Cotton 100% / 15.5oz 裏毛。硫化染めとパウダーブリーチで50〜60年代の雰囲気を再現。"},{"h":"type-001-sweat-trucker-jacket-ashgray","t":"TYPE-001 Sweat Trucker Jacket ASHGRAY","d":"2025-09-29","v":[[43942301466739,"S",25300,false],[43942301499507,"M",25300,true],[43942301532275,"L",25300,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/001_3.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/001_4.jpg"],"s":"Cotton 100% / 15.5oz 裏毛。硫化染めとパウダーブリーチで50〜60年代の雰囲気を再現。"},{"h":"type-001-sweat-trucker-jacket-washedblack","t":"TYPE-001 Sweat Trucker Jacket WASHEDBLACK","d":"2025-09-29","v":[[43942295371891,"S",25300,false],[43942295404659,"M",25300,false],[43942295437427,"L",25300,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/001_1_88cb4b22-89d9-4cc5-9001-e777f86acfc4.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/001_2.jpg"],"s":"Cotton 100% / 15.5oz 裏毛。硫化染めとパウダーブリーチで50〜60年代の雰囲気を再現。"},{"h":"tactical-mulch-pocket-bag-graykhaki","t":"Tactical Mulch Pocket Bag GRAYKHAKI","d":"2025-09-23","v":[[43931168342131,"GRYKHK",16500,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/2.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BAG4.jpg"],"s":"表地 ナイロン100%。古着をサンプリング・リサイジングした、PCや雑誌が入る大容量バッグ。"},{"h":"tactical-mulch-pocket-bag-orange","t":"Tactical Mulch Pocket Bag ORANGE","d":"2025-09-23","v":[[43931185873011,"ORG",16500,true]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BAG1.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BAG2.jpg"],"s":"表地 ナイロン100%。古着をサンプリング・リサイジングした、PCや雑誌が入る大容量バッグ。"},{"h":"type-005-double-knee-tactical-sweat-shorts-camo","t":"TYPE-005 Double Knee Tactical Sweat Shorts CAMO","d":"2025-07-19","v":[[43203738075251,"M",27500,false],[43203738108019,"L",27500,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250724_EC_01.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250724_EC_03.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代のBIGショーツがベースのダブルニー。"},{"h":"type-005-double-knee-tactical-sweat-shorts-darkorange","t":"TYPE-005 Double Knee Tactical Sweat Shorts DARKORANGE","d":"2025-07-19","v":[[43203724902515,"M",24500,false],[43203724935283,"L",24500,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250724_EC_11.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250724_EC_13.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代のBIGショーツがベースのダブルニー。"},{"h":"type-005-double-knee-tactical-sweat-shorts-obsidian","t":"TYPE-005 Double Knee Tactical Sweat Shorts OBSIDIAN","d":"2025-07-19","v":[[43203677323379,"M",24500,false],[43203677356147,"L",24500,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250724_EC_06.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250724_EC_08.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代のBIGショーツがベースのダブルニー。"},{"h":"4-11-21-00-type-002-giant-pocket-sweat-pants-ashgray","t":"TYPE-002 Giant Pocket Sweat Pants ASHGRAY","d":"2025-04-09","v":[[42974961631347,"M",24200,false],[42974961664115,"L",24200,false],[42974961696883,"XL",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250410_EC_06.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_3145.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"type-002-giant-pocket-sweat-pants-fadedyellow","t":"TYPE-002 Giant Pocket Sweat Pants FADEDYELLOW","d":"2025-04-09","v":[[42974955110515,"M",24200,false],[42974955143283,"L",24200,false],[42974955176051,"XL",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250410_EC_11.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_3148.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"type-002-giant-pocket-sweat-pants-washedblack","t":"TYPE-002 Giant Pocket Sweat Pants WASHEDBLACK","d":"2025-04-09","v":[[42974949048435,"M",24200,false],[42974949081203,"L",24200,false],[42974949113971,"XL",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250410_EC_01.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/IMG_3151.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"type-004-faded-heavy-sweat-pants-bluegray","t":"TYPE-004 Faded Heavy Sweat Pants BLUEGRAY","d":"2025-02-14","v":[[42848833568883,"M",21400,false],[42848833601651,"L",21400,false],[42848833634419,"XL",21400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250218_EC_13.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/2025-02-1422.57.43.png"],"s":"Cotton 100% / 18oz 裏毛。50〜60年代のスウェット特有のフェード感を再現。"},{"h":"type-004-faded-heavy-sweat-pants-darknavy","t":"TYPE-004 Faded Heavy Sweat Pants DARKNAVY","d":"2025-02-14","v":[[42848832061555,"M",21400,false],[42848832094323,"L",21400,false],[42848832127091,"XL",21400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250218_EC_16.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/2025-02-1422.56.21.png"],"s":"Cotton 100% / 18oz 裏毛。50〜60年代のスウェット特有のフェード感を再現。"},{"h":"type-003-faded-heavy-zip-hoodie-bluegray","t":"TYPE-003 Faded Heavy Zip Hoodie BLUEGRAY","d":"2025-02-14","v":[[42848827867251,"M",22400,false],[42848827900019,"L",22400,false],[42848827932787,"XL",22400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250218_EC_01.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/2025-02-1422.51.46.png"],"s":"Cotton 100% / 18oz 裏毛。フェード感とセパレートポケットを再現したジップフーディー。"},{"h":"type-003-faded-heavy-zip-hoodie-burgundy-コピー","t":"TYPE-003 Faded Heavy Zip Hoodie DARKNAVY","d":"2025-02-14","v":[[42848825049203,"M",22400,false],[42848825081971,"L",22400,false],[42848825114739,"XL",22400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/250218_EC_07.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/2025-02-1422.49.44.png"],"s":"Cotton 100% / 18oz 裏毛。フェード感とセパレートポケットを再現したジップフーディー。"},{"h":"faded-corduroy-detachable-riders-five-pocket-pants-black","t":"Faded Corduroy Detachable&Riders Five Pocket Pants BLACK","d":"2024-12-21","v":[[42680028037235,"Regular",41800,false],[42680028070003,"Large",41800,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_05_a8906614-cb83-4df9-a6c5-2222eba8b758.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_06_711310f4-f9d5-42b6-a42e-1bfbe2c78b3b.jpg"],"s":"Cotton 100% / Corduroy。フェード加工の厚手コーデュロイを使った5ポケットパンツ。"},{"h":"faded-corduroy-w-tailor-riders-docking-jacket-black","t":"Faded Corduroy W Tailor&Riders Docking Jacket BLACK","d":"2024-12-21","v":[[42679999791219,"Regular",52800,false],[42679999823987,"Large",52800,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_09_f6023b07-1ef3-466c-836f-0b3ee7a0ee6e.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_10_4fc47bdf-d9fa-4262-afdf-02710e093017.jpg"],"s":"Cotton 100% / Corduroy。ダブルのテーラードに、左半身へライダースをドッキング。"},{"h":"tactical-mulch-pocket-bag-yel","t":"Tactical Mulch Pocket Bag YEL","d":"2024-11-05","v":[[42503089717363,"YEL",16500,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_10.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_11.jpg"],"s":"表地 ナイロン100%。古着をサンプリング・リサイジングした、PCや雑誌が入る大容量バッグ。"},{"h":"tactical-mulch-pocket-bag-black","t":"Tactical Mulch Pocket Bag BLACK","d":"2024-11-05","v":[[42503088603251,"BLK",16500,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_15.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_16.jpg"],"s":"表地 ナイロン100%。古着をサンプリング・リサイジングした、PCや雑誌が入る大容量バッグ。"},{"h":"faded-corduroy-big-shorts-pink","t":"Faded Corduroy BIG Shorts Pink","d":"2024-10-26","v":[[42466853879923,"M",20900,false],[42466853912691,"L",20900,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_05.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_06.jpg"],"s":"Cotton 100% / Corduroy。西海岸の夏を思わせるコーデュロイのBIGショーツ。"},{"h":"faded-corduroy-big-shorts-charcoal","t":"Faded Corduroy BIG Shorts Charcoal","d":"2024-10-26","v":[[42466847228019,"M",20900,false],[42466847260787,"L",20900,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_01.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/1024_02.jpg"],"s":"Cotton 100% / Corduroy。西海岸の夏を思わせるコーデュロイのBIGショーツ。"},{"h":"type-004-faded-heavy-sweat-pants-beige","t":"TYPE-004 Faded Heavy Sweat Pants BEIGE","d":"2024-09-30","v":[[42354327552115,"M",21400,false],[42354327584883,"L",21400,false],[42354327617651,"XL",21400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_10_93b1ab70-fc58-43e6-95e5-eba514957255.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_11_d7624892-338b-4ac5-9775-e1c666092db9.jpg"],"s":"Cotton 100% / 18oz 裏毛。50〜60年代のスウェット特有のフェード感を再現。"},{"h":"type-004-faded-heavy-sweat-pants-navy","t":"TYPE-004 Faded Heavy Sweat Pants NAVY","d":"2024-09-30","v":[[42354326962291,"M",21400,false],[42354326995059,"L",21400,false],[42354327027827,"XL",21400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_14_4caf4ed2-63ef-4b0b-9afc-593d06a8eccc.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_15_7e15b736-0ca9-474e-9356-29925b48aed2.jpg"],"s":"Cotton 100% / 18oz 裏毛。50〜60年代のスウェット特有のフェード感を再現。"},{"h":"type-003-faded-heavy-zip-hoodie-beige","t":"TYPE-003 Faded Heavy Zip Hoodie BEIGE","d":"2024-09-30","v":[[42354283905139,"M",22400,false],[42354283937907,"L",22400,false],[42354283970675,"XL",22400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_01_e9b50018-2fc9-411a-9eb2-4f8497a36380.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_02_53831d57-57ac-4e89-80b7-370c2f9b8b28.jpg"],"s":"Cotton 100% / 18oz 裏毛。フェード感とセパレートポケットを再現したジップフーディー。"},{"h":"type-003-faded-heavy-zip-hoodie-navy","t":"TYPE-003 Faded Heavy Zip Hoodie NAVY","d":"2024-09-30","v":[[42354171215987,"M",22400,false],[42354171248755,"L",22400,false],[42354171281523,"XL",22400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_04_d8d083a3-1eb8-471c-b58b-79f42f55e9c0.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_05_138e0165-e107-4371-bc35-8c1b572f4ffa.jpg"],"s":"Cotton 100% / 18oz 裏毛。フェード感とセパレートポケットを再現したジップフーディー。"},{"h":"bon-tee-brown","t":"BON Tee BROWN","d":"2024-09-06","v":[[42259601588339,"S",7700,false],[42259601621107,"M",7700,false],[42259601653875,"L",7700,false],[42259601686643,"XL",7700,false],[42259601719411,"XXL",7700,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_05.webp","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_06.webp"],"s":"Cotton 100% / 6.2oz。台湾の発音記号「ボポモフォ」をルーツにした1作目のロゴTee。"},{"h":"bon-tee-navy","t":"BON Tee NAVY","d":"2024-09-06","v":[[42259582910579,"S",7700,false],[42259582943347,"M",7700,false],[42259582976115,"L",7700,false],[42259583008883,"XL",7700,false],[42259583041651,"XXL",7700,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_02.webp","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_03.webp"],"s":"Cotton 100% / 6.2oz。台湾の発音記号「ボポモフォ」をルーツにした1作目のロゴTee。"},{"h":"bon-tee","t":"BON Tee WHITE","d":"2024-09-06","v":[[42259570131059,"S",7700,false],[42259570163827,"M",7700,false],[42259570196595,"L",7700,false],[42259570229363,"XL",7700,false],[42259570262131,"XXL",7700,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_08.webp","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_09.webp"],"s":"Cotton 100% / 6.2oz。台湾の発音記号「ボポモフォ」をルーツにした1作目のロゴTee。"},{"h":"swayed-youth-tee-orange","t":"Swayed Youth Tee ORANGE","d":"2024-08-24","v":[[42207649529971,"M",8500,false],[42207649562739,"L",8500,false],[42207649595507,"XL",8500,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_01.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_04.jpg"],"s":"Cotton 100%。「若者は流されやすい」——日本の漫画・アニメの空気をまとった1着。"},{"h":"swayed-youth-tee-navy","t":"Swayed Youth Tee NAVY","d":"2024-08-24","v":[[42207651332211,"M",8500,false],[42207651364979,"L",8500,false],[42207651397747,"XL",8500,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_05.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_08.jpg"],"s":"Cotton 100%。「若者は流されやすい」——日本の漫画・アニメの空気をまとった1着。"},{"h":"swayed-youth-tee-gray","t":"Swayed Youth Tee ASH GRAY","d":"2024-08-24","v":[[42207652479091,"M",7700,false],[42207652511859,"L",7700,false],[42207652544627,"XL",7700,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_09.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_12.jpg"],"s":"Cotton 100%。「若者は流されやすい」——日本の漫画・アニメの空気をまとった1着。"},{"h":"type-002-giant-pocket-sweat-pant-navy","t":"TYPE-002 Giant Pocket Sweat Pants NAVY","d":"2024-07-27","v":[[42123172544627,"M",24200,false],[42123172577395,"L",24200,false],[42123172610163,"XL",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_13.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_14.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"type-002-giant-pocket-sweat-pant-black","t":"TYPE-002 Giant Pocket Sweat Pants BLACK","d":"2024-07-27","v":[[42123170185331,"M",24200,false],[42123170218099,"L",24200,false],[42123170250867,"XL",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_23.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_24.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"type-002-giant-pocket-sweat-pant-beige","t":"TYPE-002 Giant Pocket Sweat Pants BEIGE","d":"2024-07-27","v":[[42123174019187,"M",24200,false],[42123174051955,"L",24200,false],[42123174084723,"XL",24200,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_18.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/BF_EC_19.jpg"],"s":"Cotton 100% / 16oz 裏毛。90年代を思わせるワイドシルエットのスウェットパンツ。"},{"h":"type-000-straight-sweat-pants","t":"TYPE-000 STRAIGHT SWEAT PANTS NAVY","d":"2024-02-22","v":[[41365025554547,"S",15400,false],[41365025587315,"M",15400,false],[41365025620083,"L",15400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/5B99AEC2-F757-483D-B5D8-9698B95186B7.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/49A96E65-B8AB-4BA3-9EB0-70DC6578426C.jpg"],"s":"Cotton 100% / 14.85oz 裏毛。硫化染め＋パウダーブリーチのストレートシルエット。"},{"h":"type-000-crew-neck-sweat-shirts","t":"TYPE-000 CREW NECK SWEAT SHIRTS NAVY","d":"2024-02-22","v":[[41365023588467,"S",14300,false],[41365023621235,"M",14300,false],[41365023654003,"L",14300,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/9ACBA5B3-6A03-4B72-A226-8A8871C4C3AA.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/0305CD42-84B3-4FA9-AD0F-877D2292B1FC.jpg"],"s":"Cotton 100% / 14.85oz 裏毛。硫化染め＋パウダーブリーチ。首の詰まりと強めのリブ。"},{"h":"テスト２","t":"TYPE-000 STRAIGHT SWEAT PANTS BLACK","d":"2024-02-22","v":[[41365025390707,"S",15400,false],[41365025423475,"M",15400,false],[41365025456243,"L",15400,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/9A391AB8-9CA2-4F29-A92B-AA1612346F9A.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/05CD12CB-1F7A-4AC6-993D-23AC57A493A9.jpg"],"s":"Cotton 100% / 14.85oz 裏毛。硫化染め＋パウダーブリーチのストレートシルエット。"},{"h":"type-000-crew-neck-sweat-shirts-black","t":"TYPE-000 CREW NECK SWEAT SHIRTS BLACK","d":"2024-02-22","v":[[41364994031731,"S",14300,false],[41364994064499,"M",14300,false],[41364994097267,"L",14300,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/8CF218DC-3DC1-4565-AA9C-CAC0F5972F01.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/C5F38B21-5A8E-4E9E-97AA-293B09F0A7A8.jpg"],"s":"Cotton 100% / 14.85oz 裏毛。硫化染め＋パウダーブリーチ。首の詰まりと強めのリブ。"},{"h":"type-001-sweat-trucker-jacket-1","t":"TYPE-001 SWEAT TRUCKER JACKET NAVY","d":"2024-05-19","v":[[41814982459507,"S",25300,false],[41814982492275,"M",25300,false],[41814982525043,"L",25300,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/240516_EC_01.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/240516_EC_03.jpg"],"s":"Cotton 100% / 15.5oz 裏毛。硫化染めとパウダーブリーチで再現した2ndタイプのトラッカー。"},{"h":"type-001-sweat-trucker-jacket","t":"TYPE-001 SWEAT TRUCKER JACKET BLACK","d":"2024-05-19","v":[[41814974595187,"S",25300,false],[41814974627955,"M",25300,false],[41814974660723,"L",25300,false]],"i":["https://cdn.shopify.com/s/files/1/0596/8573/2467/files/240516_EC_05.jpg","https://cdn.shopify.com/s/files/1/0596/8573/2467/files/240516_EC_07.jpg"],"s":"Cotton 100% / 15.5oz 裏毛。硫化染めとパウダーブリーチで再現した2ndタイプのトラッカー。"}]</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* =====================================================================
+   CONFIG — Shopify につなぐときはここを埋めるだけ
+   ・domain:           xxxx.myshopify.com
+   ・storefrontToken:  Headless チャネル（または Storefront API アプリ）の公開トークン
+   ・collectionHandle: 店内に並べるコレクション
+   入れなくても動く：商品データは bonknowfreaks.com から取り込んだもの（#catalog）を使い、
+   レジは Shopify のカートリンクで本番ストアの決済へ進む。つなぐと在庫・価格がリアルタイムになる。
+   商品は種類ごとに自動で売り場へ並ぶ（在庫あり→新しい順）。
+   ===================================================================== */
+const CONFIG = {
+  shopify: {
+    domain: '',
+    storefrontToken: '',
+    apiVersion: '2026-10',
+    collectionHandle: 'station',
+  },
+};
+const SHOP = CONFIG.shopify;
+const SHOPIFY_ON = !!(SHOP.domain && SHOP.storefrontToken);
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches;
+const D2R = Math.PI / 180;
+const $ = s => document.querySelector(s);
+const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+if (IS_TOUCH) document.body.classList.add('touch');
+
+let seed = 20261121;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const pick = a => a[Math.floor(rnd() * a.length)];
+const range = (a, b) => a + rnd() * (b - a);
+const price = (a, b) => Math.round(range(a, b) / 1000) * 1000 - 100;
+function hexRGB(h){ h = h.replace('#',''); return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]; }
+
+/* ===== 売り場の構成（Blender: BonknowStation と同じ配置） ===== */
+const SITE = 'https://bonknowfreaks.com';
+const RACKS = [
+  { id:'R1', z: 9, label:'01 — OUTER',          match: it => it.kind === 'jacket' },
+  { id:'R2', z: 3, label:'02 — HOODIE & KNIT',  match: it => it.kind === 'hoodie' || it.kind === 'long' },
+  { id:'R3', z:-3, label:'03 — WIDE PANTS',     match: it => it.kind === 'pants' && /TYPE-002|Corduroy/i.test(it.title) },
+  { id:'R4', z:-9, label:'04 — SWEAT PANTS',    match: it => it.kind === 'pants' },
+];
+const TABLES = [
+  { id:'T1', z: 6, label:'TEE',            match: it => it.kind === 'tee' },
+  { id:'T2', z: 0, label:'SHORTS',         match: it => it.kind === 'shorts' },
+  { id:'T3', z:-6, label:'SHORTS & BAGS',  match: it => it.kind === 'shorts' || it.kind === 'bag' },
+];
+const RACK_CAP = 10, TABLE_CAP = 8;
+const STACK_OFF = [[-1.27,-.66],[-.83,-.66],[-1.27,-.22],[-.83,-.22],[-1.27,.22],[-.83,.22],[-1.27,.66],[-.83,.66]]; // [x, zOffset]
+const ALL_SLOTS = [];
+RACKS.forEach(r => { for (let i=0;i<RACK_CAP;i++) ALL_SLOTS.push(`${r.id}-${String(i+1).padStart(2,'0')}`); });
+TABLES.forEach(t => { for (let i=0;i<TABLE_CAP;i++) ALL_SLOTS.push(`${t.id}-${i+1}`); });
+
+/* 商品データ → 3Dの形・色・置き場所 */
+const COLORS = { RED:'#9a2b27', BLACK:'#1d1d20', WASHEDBLACK:'#2e2e31', OBSIDIAN:'#202328', CHARCOAL:'#3d3d40', BEIGE:'#cbbd9c', PINK:'#d6a0a8', OFFWHITE:'#e7e1d3', WHITE:'#ecebe5', NAVY:'#26324f', DARKNAVY:'#1b2237', ASHGRAY:'#8e8f92', GRAY:'#8e8f92', BLUEGRAY:'#6c7d8e', BURGUNDY:'#5c1f2c', OLIVE:'#575c3b', FADEDYELLOW:'#d4bf78', YEL:'#dfc23c', YELLOW:'#dfc23c', ORANGE:'#d66a2c', DARKORANGE:'#b2532b', CAMO:'#6a6a4b', GRAYKHAKI:'#7c7a67', BROWN:'#6b4b36' };
+function colorOf(title){ const w = title.toUpperCase().replace(/ASH GRAY/g,'ASHGRAY').split(/[\s\-]+/).reverse(); for (const x of w) if (COLORS[x]) return COLORS[x]; return '#77777a'; }
+function kindOf(title){
+  const t = title.toLowerCase();
+  if (/bag/.test(t)) return 'bag';
+  if (/shorts/.test(t)) return 'shorts';
+  if (/pants|pant\b/.test(t)) return 'pants';
+  if (/hoodie|フーディ|パーカー/.test(t)) return 'hoodie';
+  if (/jacket|bomber|coat|ジャケット/.test(t)) return 'jacket';
+  if (/knit|sweat shirt|crew|long|ロンt|スウェット/.test(t)) return 'long';
+  return 'tee';
+}
+function normalize(p){ // p = { h:handle, t:title, d:date, v:[[variantId,size,price,available]], i:[images], s:desc }
+  const sizeOk = x => /^(XXS|XS|S|M|L|XL|XXL|XXXL|FREE|F|REGULAR|LARGE|\d+)$/i.test(String(x).trim());
+  const variants = p.v.map(([id, size, price, available]) => ({ id, size: sizeOk(size) ? String(size).trim() : 'ONE SIZE', price, available }));
+  const avail = variants.filter(v => v.available);
+  return { handle:p.h, title:p.t, date:p.d || '', variants, available:avail.length > 0,
+    price:Math.min(...(avail.length ? avail : variants).map(v => v.price)),
+    images:p.i || [], desc:p.s || '', url:`${SITE}/products/${encodeURIComponent(p.h)}`,
+    kind:kindOf(p.t), color:colorOf(p.t) };
+}
+function allocate(list){
+  const items = {}, fill = {};
+  const zones = [...RACKS.map(r => ({ ...r, cap:RACK_CAP, rack:true })), ...TABLES.map(t => ({ ...t, cap:TABLE_CAP, rack:false }))];
+  const sorted = list.slice().sort((a,b) => (b.available - a.available) || b.date.localeCompare(a.date)); // 在庫あり→新しい順
+  for (const it of sorted){
+    let z = zones.find(z => z.match(it) && (fill[z.id]||0) < z.cap);
+    if (!z){ const hang = !['tee','shorts','bag'].includes(it.kind); z = zones.find(z => z.rack === hang && (fill[z.id]||0) < z.cap) || zones.find(z => (fill[z.id]||0) < z.cap); }
+    if (!z){ console.warn('置き場所が足りない:', it.title); continue; }
+    const n = fill[z.id] = (fill[z.id]||0) + 1;
+    it.slot = z.rack ? `${z.id}-${String(n).padStart(2,'0')}` : `${z.id}-${n}`; it.zone = z.label;
+    items[it.slot] = it;
+  }
+  return items;
+}
+const CATALOG = JSON.parse(document.getElementById('catalog').textContent);
+const byHandle = h => Object.values(state.items).find(i => i.handle === h);
+
+
+/* ===== 服のシルエット（3Dとサムネで共用） ===== */
+const SHAPES = {
+  tee:[['M',-.07,0],['L',-.2,-.035],['L',-.32,-.15],['L',-.26,-.235],['L',-.21,-.195],['L',-.21,-.75],['L',.21,-.75],['L',.21,-.195],['L',.26,-.235],['L',.32,-.15],['L',.2,-.035],['L',.07,0],['Q',0,-.075,-.07,0]],
+  long:[['M',-.07,0],['L',-.2,-.035],['L',-.27,-.2],['L',-.3,-.68],['L',-.24,-.69],['L',-.215,-.27],['L',-.21,-.74],['L',.21,-.74],['L',.215,-.27],['L',.24,-.69],['L',.3,-.68],['L',.27,-.2],['L',.2,-.035],['L',.07,0],['Q',0,-.07,-.07,0]],
+  hoodie:[['M',-.08,0],['L',-.22,-.04],['L',-.29,-.21],['L',-.32,-.72],['L',-.25,-.73],['L',-.235,-.3],['L',-.23,-.8],['L',.23,-.8],['L',.235,-.3],['L',.25,-.73],['L',.32,-.72],['L',.29,-.21],['L',.22,-.04],['L',.08,0],['Q',0,.07,-.08,0]],
+  jacket:[['M',-.06,0],['L',-.23,-.045],['L',-.3,-.22],['L',-.33,-.8],['L',-.26,-.81],['L',-.25,-.32],['L',-.25,-.88],['L',.25,-.88],['L',.25,-.32],['L',.26,-.81],['L',.33,-.8],['L',.3,-.22],['L',.23,-.045],['L',.06,0],['L',0,-.12],['L',-.06,0]],
+  pants:[['M',-.2,0],['L',.2,0],['L',.25,-.98],['L',.03,-.98],['L',0,-.32],['L',-.03,-.98],['L',-.25,-.98]],
+  shorts:[['M',-.22,0],['L',.22,0],['L',.28,-.52],['L',.03,-.52],['L',0,-.2],['L',-.03,-.52],['L',-.28,-.52]],
+  tank:[['M',-.06,0],['L',-.13,0],['Q',-.14,-.18,-.22,-.22],['L',-.22,-.72],['L',.22,-.72],['L',.22,-.22],['Q',.14,-.18,.13,0],['L',.06,0],['Q',0,-.12,-.06,0]],
+};
+function toShape(cmds){
+  const s = new THREE.Shape();
+  for (const c of cmds){ if(c[0]==='M') s.moveTo(c[1],c[2]); else if(c[0]==='L') s.lineTo(c[1],c[2]); else s.quadraticCurveTo(c[1],c[2],c[3],c[4]); }
+  return s;
+}
+function tracePath(g, cmds, ox, oy, S){
+  g.beginPath();
+  for (const c of cmds){
+    if(c[0]==='M') g.moveTo(ox+c[1]*S, oy-c[2]*S);
+    else if(c[0]==='L') g.lineTo(ox+c[1]*S, oy-c[2]*S);
+    else g.quadraticCurveTo(ox+c[1]*S, oy-c[2]*S, ox+c[3]*S, oy-c[4]*S);
+  }
+  g.closePath();
+}
+const thumbCache = {};
+function setImg(el, item, w, idx=0){ const u = item.images && item.images[idx]; el.onerror = () => { el.onerror = null; el.src = thumb(item); }; el.src = u ? `${u}?width=${w}` : thumb(item); }
+function thumb(item){
+  if (thumbCache[item.slot]) return thumbCache[item.slot];
+  const c = document.createElement('canvas'); c.width = 480; c.height = 600;
+  const g = c.getContext('2d');
+  const bg = g.createLinearGradient(0,0,0,600); bg.addColorStop(0,'#eeebe4'); bg.addColorStop(1,'#dcd8ce');
+  g.fillStyle = bg; g.fillRect(0,0,480,600);
+  g.save();
+  const col = item.color;
+  if (SHAPES[item.kind]){
+    const S = 560, ox = 240, oy = 70;
+    g.shadowColor = 'rgba(0,0,0,.25)'; g.shadowBlur = 24; g.shadowOffsetY = 10;
+    tracePath(g, SHAPES[item.kind], ox, oy, S); g.fillStyle = col; g.fill();
+    g.shadowColor = 'transparent';
+    g.save(); g.clip();
+    const sh = g.createLinearGradient(80,0,400,0); sh.addColorStop(0,'rgba(0,0,0,.18)'); sh.addColorStop(.5,'rgba(255,255,255,.07)'); sh.addColorStop(1,'rgba(0,0,0,.2)');
+    g.fillStyle = sh; g.fillRect(0,0,480,600);
+    g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 2;
+    if (item.kind==='jacket'){ g.beginPath(); g.moveTo(240,140); g.lineTo(240,560); g.stroke(); }
+    if (item.kind==='hoodie'){ g.strokeRect(170,330,140,80); }
+    g.restore();
+    // hanger
+    g.strokeStyle = '#222'; g.lineWidth = 4; g.beginPath(); g.moveTo(240,72); g.lineTo(240,48); g.arc(252,40,12,Math.PI,Math.PI*0.1,false); g.stroke();
+  } else {
+    g.shadowColor = 'rgba(0,0,0,.25)'; g.shadowBlur = 24; g.shadowOffsetY = 10; g.fillStyle = col;
+    if (item.kind==='folded'){ for(let i=0;i<3;i++){ g.fillRect(110, 360-i*46, 260, 44);} g.shadowColor='transparent'; g.fillStyle='rgba(255,255,255,.1)'; for(let i=0;i<3;i++) g.fillRect(110,360-i*46,260,6); }
+    else if (item.kind==='cap'){ g.beginPath(); g.ellipse(240,320,120,90,0,Math.PI,0); g.fill(); g.beginPath(); g.ellipse(300,325,110,24,0,0,Math.PI*2); g.fill(); }
+    else if (item.kind==='beanie'){ g.beginPath(); g.ellipse(240,320,110,130,0,Math.PI,0); g.fill(); g.fillRect(130,310,220,70); }
+    else if (item.kind==='bandana'){ g.translate(240,300); g.rotate(Math.PI/4); g.fillRect(-120,-120,240,240); g.shadowColor='transparent'; g.strokeStyle='rgba(255,255,255,.6)'; g.lineWidth=3; g.strokeRect(-100,-100,200,200); }
+    else if (item.kind==='bag'){ g.fillRect(130,220,220,260); g.shadowColor='transparent'; g.strokeStyle=col; g.lineWidth=14; g.beginPath(); g.arc(240,220,60,Math.PI,0); g.stroke(); }
+  }
+  g.restore();
+  g.fillStyle = 'rgba(10,11,16,.6)'; g.font = '700 14px "Space Mono", monospace'; g.fillText('BONKNOW FREAKS  /  ' + item.slot, 22, 580);
+  return (thumbCache[item.slot] = c.toDataURL('image/jpeg', .86));
+}
+
+/* ===== テクスチャ ===== */
+function canvasTex(w, h, draw){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+  return t;
+}
+function tileTex({base, grout, cols, rows, vary=.06, grime=0}){
+  const [R,G,B] = hexRGB(base);
+  return canvasTex(512,512,(g,w,h)=>{
+    g.fillStyle = grout; g.fillRect(0,0,w,h);
+    const tw = w/cols, th = h/rows, gap = 3;
+    for (let r=0;r<rows;r++){ const off = (r%2)*tw/2;
+      for (let k=-1;k<=cols;k++){ const x = k*tw+off, y = r*th, v = 1+(rnd()-.5)*vary*2;
+        g.fillStyle = `rgb(${Math.min(255,R*v)|0},${Math.min(255,G*v)|0},${Math.min(255,B*v)|0})`;
+        g.fillRect(x+gap/2, y+gap/2, tw-gap, th-gap);
+        const gr = g.createLinearGradient(0,y,0,y+th); gr.addColorStop(0,'rgba(255,255,255,.12)'); gr.addColorStop(.5,'rgba(255,255,255,0)'); gr.addColorStop(1,'rgba(0,0,0,.10)');
+        g.fillStyle = gr; g.fillRect(x+gap/2, y+gap/2, tw-gap, th-gap);
+      } }
+    for (let i=0;i<grime*60;i++){ const x=rnd()*w,y=rnd()*h,r=8+rnd()*50; const gr=g.createRadialGradient(x,y,0,x,y,r); gr.addColorStop(0,'rgba(40,30,20,.06)'); gr.addColorStop(1,'rgba(40,30,20,0)'); g.fillStyle=gr; g.fillRect(x-r,y-r,r*2,r*2); }
+  });
+}
+function concreteTex(base, specks=1){
+  const [R,G,B] = hexRGB(base);
+  return canvasTex(512,512,(g,w,h)=>{
+    g.fillStyle = base; g.fillRect(0,0,w,h);
+    for (let i=0;i<2600*specks;i++){ const v=(rnd()-.5)*40; g.fillStyle=`rgba(${R+v|0},${G+v|0},${B+v|0},${.25+rnd()*.4})`; const s=1+rnd()*3; g.fillRect(rnd()*w,rnd()*h,s,s); }
+    for (let i=0;i<40;i++){ const x=rnd()*w,y=rnd()*h,r=20+rnd()*90; const gr=g.createRadialGradient(x,y,0,x,y,r); const d=rnd()<.5; gr.addColorStop(0,d?'rgba(0,0,0,.07)':'rgba(255,255,255,.05)'); gr.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gr; g.fillRect(x-r,y-r,r*2,r*2); }
+  });
+}
+function fabricTex(){
+  return canvasTex(256,256,(g,w,h)=>{
+    g.fillStyle='#ececec'; g.fillRect(0,0,w,h);
+    for(let y=0;y<h;y+=2){ g.fillStyle=`rgba(0,0,0,${.03+rnd()*.04})`; g.fillRect(0,y,w,1); }
+    for(let x=0;x<w;x+=2){ g.fillStyle=`rgba(255,255,255,${.03+rnd()*.05})`; g.fillRect(x,0,1,h); }
+    for(let i=0;i<900;i++){ g.fillStyle=`rgba(0,0,0,${rnd()*.06})`; g.fillRect(rnd()*w,rnd()*h,1+rnd()*2,1); }
+  });
+}
+function labelTex(w, h, draw){ const t = canvasTex(w,h,draw); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t; }
+
+/* ===== ジオメトリ補助：トンネル断面の円弧面（内向き） ===== */
+function arcSurface(r, a0deg, a1deg, z0, z1, seg, cx=0, cy=1){
+  const a0=a0deg*D2R, a1=a1deg*D2R, pos=[], nor=[], uv=[], idx=[];
+  for (let i=0;i<=seg;i++){ const a=a0+(a1-a0)*i/seg, c=Math.cos(a), s=Math.sin(a);
+    for (const z of [z0,z1]){ pos.push(cx+r*c, cy+r*s, z); nor.push(-c,-s,0); uv.push(r*(a-a0), z-z0); } }
+  for (let i=0;i<seg;i++){ const p00=i*2, p01=i*2+1, p10=(i+1)*2, p11=(i+1)*2+1; idx.push(p00,p01,p10, p10,p01,p11); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor,3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv,2));
+  geo.setIndex(idx);
+  return geo;
+}
+
+/* ===== レンダラー ===== */
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+} catch(e){
+  $('#err').style.display='flex'; $('#err').textContent='このブラウザでは3D表示（WebGL）が使えません。別のブラウザでお試しください。';
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, IS_TOUCH ? 1.5 : 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = .95;
+$('#app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05060a);
+scene.fog = new THREE.Fog(0x06070b, 16, 48);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.35;
+
+const camera = new THREE.PerspectiveCamera(IS_TOUCH ? 72 : 68, innerWidth/innerHeight, 0.05, 120);
+camera.rotation.order = 'YXZ';
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.45, 0.9);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ===== 状態 ===== */
+const state = {
+  pos: new THREE.Vector3(-1.6, 0, 13.8), yaw: 0.14, pitch: -0.02, tyaw: 0.14, tpitch: -0.02, vel: new THREE.Vector3(), bobAmp: 0, walk: null, dig: null,
+  items: {}, slots: {}, hovered: null, selected: null, started: false, fly: null,
+  cart: [], cartLines: {}, cartId: null, checkoutUrl: null,
+};
+const interactables = [];
+const animated = [];
+
+function build(){
+  const T = {
+    cream: tileTex({ base:'#ddd5bf', grout:'#a9a18b', cols:4, rows:8, vary:.05, grime:1.2 }),
+    navy:  tileTex({ base:'#1f305d', grout:'#0d1531', cols:4, rows:8, vary:.09 }),
+    conc:  concreteTex('#9e9b95'),
+    table: concreteTex('#c2bfb8', .8),
+    dark:  concreteTex('#26272b'),
+    ballast: concreteTex('#2b241f', 3),
+    fabric: fabricTex(),
+  };
+  const M = {
+    cream: new THREE.MeshStandardMaterial({ map:T.cream, roughness:.38 }),
+    navy:  new THREE.MeshStandardMaterial({ map:T.navy, roughness:.16 }),
+    stripe:new THREE.MeshStandardMaterial({ color:0xcfc29c, roughness:.3 }),
+    floor: new THREE.MeshStandardMaterial({ map:T.conc.clone(), roughness:.88 }),
+    coping:new THREE.MeshStandardMaterial({ color:0x8f8979, roughness:.7 }),
+    ballast:new THREE.MeshStandardMaterial({ map:T.ballast, roughness:.97 }),
+    rail:  new THREE.MeshStandardMaterial({ color:0x7a6c62, roughness:.32, metalness:.9 }),
+    sleeper:new THREE.MeshStandardMaterial({ color:0x2a221b, roughness:.92 }),
+    steel: new THREE.MeshStandardMaterial({ color:0x111113, roughness:.35, metalness:1 }),
+    table: new THREE.MeshStandardMaterial({ map:T.table, roughness:.75 }),
+    dark:  new THREE.MeshStandardMaterial({ map:T.dark, roughness:.95 }),
+    black: new THREE.MeshBasicMaterial({ color:0x000000 }),
+    glow:  new THREE.MeshBasicMaterial({ color:new THREE.Color(1.0,.96,.88).multiplyScalar(2.2), toneMapped:false }),
+    red:   new THREE.MeshStandardMaterial({ color:0xd8231a, roughness:.4 }),
+    white: new THREE.MeshStandardMaterial({ color:0xf2f0ea, roughness:.4 }),
+  };
+  M.floor.map.repeat.set(1.9, 15); M.floor.map.needsUpdate = true;
+  const add = (geo, mat, x=0, y=0, z=0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); scene.add(m); return m; };
+
+  // トンネル本体（半径3.3m・中心高1.0m・全長30m）
+  add(arcSurface(3.3, 0, 360, -15, 15, 128), M.cream);
+  // 紺タイルの壁（ホーム側）
+  add(arcSurface(3.27, 148, 215, -15, 15, 40), M.navy);
+  // クリーム色の帯
+  for (const a of [142.2, 152.6, 201]) add(arcSurface(3.24, a-.8, a+.8, -15, 15, 4), M.stripe);
+  // 紺のリブ（2本1組×6）
+  for (const z of [12.9,12.48,8.4,7.98,3.9,3.48,-.6,-1.02,-5.1,-5.52,-9.6,-10.02]) add(arcSurface(3.235, -12, 150, z-.1, z+.1, 64), M.navy);
+  // 天井の光のライン
+  add(new THREE.BoxGeometry(.14,.06,30), M.glow, 0, 4.21, 0);
+  // ホーム
+  add(new THREE.BoxGeometry(3.85, 1, 30), M.floor, -1.375, -.5, 0);
+  add(new THREE.BoxGeometry(.35, .03, 30), M.coping, .425, .0, 0);
+  add(new THREE.BoxGeometry(.1, .004, 30), new THREE.MeshStandardMaterial({ color:0xe8c22a, roughness:.6 }), .1, .003, 0);
+  const mtg = labelTex(1024, 48, (g,w,h)=>{ g.clearRect(0,0,w,h); g.fillStyle='rgba(245,242,232,.85)'; g.font='700 30px "Archivo Black", sans-serif'; g.textBaseline='middle'; g.fillText('MIND THE GAP', 40, h/2+2); });
+  mtg.wrapS = THREE.RepeatWrapping; mtg.repeat.set(10, 1);
+  const mtgGeo = new THREE.PlaneGeometry(30, .22).rotateX(-Math.PI/2).rotateY(-Math.PI/2);
+  add(mtgGeo, new THREE.MeshBasicMaterial({ map:mtg, transparent:true, depthWrite:false, color:0xbdbab2 }), -.05, .004, 0);
+  // 線路（奥のトンネルまで続く）
+  add(new THREE.BoxGeometry(2.75, .25, 60), M.ballast, 1.925, -1.125, -15);
+  for (const x of [1.18, 2.62]) add(new THREE.BoxGeometry(.07,.13,60), M.rail, x, -.885, -15);
+  add(new THREE.BoxGeometry(.08,.08,60), M.rail, 1.92, -.88, -15);
+  add(new THREE.BoxGeometry(.08,.08,60), M.rail, 3.04, -.81, -15);
+  const sleepers = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9,.05,.24), M.sleeper, 80);
+  const tmp = new THREE.Object3D();
+  for (let i=0;i<80;i++){ tmp.position.set(1.9, -.975, 14.7 - i*.75); tmp.updateMatrix(); sleepers.setMatrixAt(i, tmp.matrix); }
+  scene.add(sleepers);
+  // 足元のLED（テクノのラッピング）
+  const ledMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(0x00e5ff).multiplyScalar(1.6), toneMapped:false });
+  add(new THREE.BoxGeometry(.025,.012,30), ledMat, -3.0, .008, 0);
+  state.ledMat = ledMat;
+
+  // 端の壁：手前は閉じて、奥はトンネルの口
+  const cap = new THREE.Shape(); cap.absarc(0, 1, 3.3, 0, Math.PI*2, false);
+  const near = add(new THREE.ShapeGeometry(cap, 64).rotateY(Math.PI), M.cream, 0, 0, 15);
+  const farShape = new THREE.Shape(); farShape.absarc(0, 1, 3.3, 0, Math.PI*2, false);
+  const hole = new THREE.Path(); hole.absarc(1.9, .55, 1.75, 0, Math.PI*2, true); farShape.holes.push(hole);
+  add(new THREE.ShapeGeometry(farShape, 64), M.cream, 0, 0, -15);
+  // 奥の暗いトンネル
+  add(arcSurface(1.75, 0, 360, -48, -15, 48, 1.9, .55), M.dark);
+  for (let z=-18; z>-48; z-=3) add(arcSurface(1.72, 0, 360, z-.08, z+.08, 32, 1.9, .55), M.steel);
+  add(new THREE.CircleGeometry(1.8, 32), M.black, 1.9, .55, -47.9);
+  // 信号
+  const sig = add(new THREE.SphereGeometry(.05, 12, 8), new THREE.MeshBasicMaterial({ color:new THREE.Color(1,.05,.04).multiplyScalar(4), toneMapped:false }), 3.25, 1.25, -24);
+  const sigL = new THREE.PointLight(0xff2010, 1.2, 6, 2); sigL.position.copy(sig.position); scene.add(sigL);
+  // トンネルの奥のマゼンタ
+  const mag = new THREE.PointLight(0xff2bd6, 2, 12, 2); mag.position.set(1.9, .7, -17); scene.add(mag); state.mag = mag;
+  // 近づいてくるヘッドライト（終電は行ったはずなのに…）
+  const train = new THREE.Group();
+  const hlMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(1,.95,.8).multiplyScalar(5), toneMapped:false, transparent:true });
+  for (const x of [-.45,.45]){ const s = new THREE.Mesh(new THREE.SphereGeometry(.07,12,8), hlMat); s.position.set(x,0,0); train.add(s); }
+  const trainL = new THREE.PointLight(0xfff0d0, 0, 18, 2); trainL.position.set(0,.2,1); train.add(trainL);
+  train.position.set(1.9, -.25, -48); scene.add(train);
+  state.train = { group:train, light:trainL, mat:hlMat };
+
+  // 照明
+  scene.add(new THREE.HemisphereLight(0xfff1dc, 0x1a1c26, .55));
+  for (const z of [12.5,7.5,2.5,-2.5,-7.5,-12.5]){ const l = new THREE.PointLight(0xffe9cf, 6.5, 0, 1.7); l.position.set(-.3, 3.7, z); scene.add(l); }
+
+  // ラウンデル（駅名サイン＝BONKNOW FREAKS）
+  const barTex = labelTex(512, 60, (g,w,h)=>{ g.fillStyle='#0019a8'; g.fillRect(0,0,w,h); g.fillStyle='#fff'; g.font='700 34px "Archivo Black", sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('BONKNOW FREAKS', w/2, h/2+2); });
+  const barMat = new THREE.MeshStandardMaterial({ map:barTex, roughness:.4 });
+  const ringGeo = new THREE.RingGeometry(.3,.44,64), discGeo = new THREE.CircleGeometry(.3,48), barGeo = new THREE.PlaneGeometry(1.64,.19);
+  const roundel = (x,y,z) => { const g = new THREE.Group();
+    const ring = new THREE.Mesh(ringGeo, M.red); const disc = new THREE.Mesh(discGeo, M.white); disc.position.z=-.004;
+    const bar = new THREE.Mesh(barGeo, barMat); bar.position.z = .006; g.add(disc, ring, bar);
+    g.position.set(x,y,z); scene.add(g); g.lookAt(0, 1, z); };
+  [10,1,-8].forEach(z => roundel(-2.95, 2.3, z));
+  [6,-3,-11].forEach(z => roundel(3.13, 1.7, z));
+
+  // 発車標（ドットマトリクス）
+  const boardC = document.createElement('canvas'); boardC.width = 1024; boardC.height = 192;
+  const boardTex = new THREE.CanvasTexture(boardC); boardTex.colorSpace = THREE.SRGBColorSpace;
+  const board = new THREE.Group();
+  const bBox = new THREE.Mesh(new THREE.BoxGeometry(1.9,.4,.08), M.steel);
+  const bFace = new THREE.Mesh(new THREE.PlaneGeometry(1.8,.33), new THREE.MeshBasicMaterial({ map:boardTex, toneMapped:false }));
+  bFace.position.z = .042; board.add(bBox, bFace);
+  for (const x of [-.8,.8]){ const rod = new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,.9,6), M.steel); rod.position.set(x,.65,0); board.add(rod); }
+  board.position.set(-1.25, 2.95, 11.2); scene.add(board);
+  state.board = { c:boardC, g:boardC.getContext('2d'), tex:boardTex, x:0, last:0 };
+
+  // 手前の壁のポスター
+  const posterTex = labelTex(800, 1100, (g,w,h)=>{
+    g.fillStyle='#0a0b10'; g.fillRect(0,0,w,h);
+    g.strokeStyle='#e32017'; g.lineWidth=70; g.beginPath(); g.arc(w/2, 330, 190, 0, Math.PI*2); g.stroke();
+    g.fillStyle='#0019a8'; g.fillRect(90, 290, w-180, 84); g.fillStyle='#fff'; g.font='48px "Archivo Black", sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('BONKNOW FREAKS', w/2, 334);
+    g.font='120px "Archivo Black", sans-serif'; g.fillStyle='#f2efe6'; g.fillText('AFTER', w/2, 700); g.fillText('LAST TRAIN', w/2, 820);
+    g.fillStyle='#00e5ff'; g.font='700 30px "Space Mono", monospace'; g.fillText('DIG  /  SAMPLE  /  REBUILD', w/2, 920);
+    g.fillStyle='rgba(242,239,230,.8)'; g.font='700 40px "Noto Sans JP", sans-serif'; g.fillText('離れてても、お店で買おう。', w/2, 1010);
+  });
+  add(new THREE.PlaneGeometry(1.5, 2.06).rotateY(Math.PI), new THREE.MeshStandardMaterial({ map:posterTex, roughness:.5 }), -1.5, 1.55, 14.97);
+
+  // 接地影（安価なフェイク）
+  const shadowTex = labelTex(128,128,(g,w,h)=>{ const gr=g.createRadialGradient(w/2,h/2,4,w/2,h/2,w/2); gr.addColorStop(0,'rgba(0,0,0,.55)'); gr.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gr; g.fillRect(0,0,w,h); });
+  const shadowMat = new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, depthWrite:false });
+  const shadow = (w,d,x,z) => add(new THREE.PlaneGeometry(w,d).rotateX(-Math.PI/2), shadowMat, x, .006, z);
+
+  // 服の共通ジオメトリ
+  const garmentGeo = {};
+  for (const k in SHAPES){ const g = new THREE.ExtrudeGeometry(toShape(SHAPES[k]), { depth:.03, bevelEnabled:true, bevelThickness:.006, bevelSize:.006, bevelSegments:1, curveSegments:6 }); g.translate(0,0,-.015); garmentGeo[k] = g; }
+  const hookGeo = new THREE.TorusGeometry(.024,.0035,6,16,Math.PI*1.35);
+  const stemGeo = new THREE.CylinderGeometry(.003,.003,.03,5);
+  const shoulderGeo = new THREE.BoxGeometry(.4,.008,.008);
+
+  // ラック（4台×10着）— Blender: x=-2.55、バー高1.55m、幅3m
+  const postGeo = new THREE.CylinderGeometry(.015,.015,1.55,10), barGeo2 = new THREE.CylinderGeometry(.015,.015,3,10).rotateX(Math.PI/2);
+  const footGeo = new THREE.BoxGeometry(.35,.02,.04), rodGeo = new THREE.CylinderGeometry(.008,.008,.3,6);
+  RACKS.forEach((r, ri) => {
+    add(barGeo2, M.steel, -2.55, 1.55, r.z);
+    for (const dz of [-1.5,1.5]){ add(postGeo, M.steel, -2.55, .775, r.z+dz); add(footGeo, M.steel, -2.55, .01, r.z+dz); add(rodGeo, M.steel, -2.55, 1.7, r.z+dz); }
+    shadow(.9, 3.4, -2.55, r.z);
+    const head = labelTex(1024, 56, (g,w,h)=>{ g.fillStyle='#0a0b10'; g.fillRect(0,0,w,h); g.fillStyle='#f2efe6'; g.font='34px "Archivo Black", sans-serif'; g.textBaseline='middle'; g.fillText(r.label, 22, h/2+2); g.fillStyle='#00e5ff'; g.font='700 20px "Space Mono", monospace'; g.textAlign='right'; g.fillText('BONKNOW FREAKS LINE', w-22, h/2+1); });
+    const hm = add(new THREE.PlaneGeometry(3.02,.165).rotateY(Math.PI/2), new THREE.MeshBasicMaterial({ map:head, color:0xbfbfbf, toneMapped:false }), -2.54, 1.82, r.z);
+    const back = add(new THREE.BoxGeometry(.02,.18,3.06), M.steel, -2.555, 1.82, r.z);
+    for (let i=0;i<10;i++){
+      const slot = `${r.id}-${String(i+1).padStart(2,'0')}`;
+      const z = r.z + 1.147 - i*.2549; // Blender: by = -10.147 + i*0.2549
+      const g = new THREE.Group(); g.position.set(-2.55, 1.5, z);
+      const mat = new THREE.MeshStandardMaterial({ map:T.fabric, color:0xffffff, roughness:.95 });
+      const body = new THREE.Mesh(garmentGeo.tee, mat); body.position.y = -.01;
+      body.userData.slot = slot; interactables.push(body);
+      const hook = new THREE.Mesh(hookGeo, M.steel); hook.position.set(-.012, .05, 0); hook.rotation.z = -.2;
+      const stem = new THREE.Mesh(stemGeo, M.steel); stem.position.y = .012;
+      const sh = new THREE.Mesh(shoulderGeo, M.steel); sh.position.y = -.025;
+      g.add(body, hook, stem, sh); scene.add(g);
+      state.slots[slot] = { type:'hang', group:g, body, mat, base:g.position.clone(), baseRot:0, t:0, view:{ x:-.75, z, yaw:Math.PI/2, pitch:-.1 }, geo:garmentGeo };
+      animated.push(slot);
+    }
+  });
+
+  // テーブル（3台×8山）
+  const stackGeo = new THREE.BoxGeometry(.26,.05,.32);
+  TABLES.forEach((t) => {
+    add(new THREE.BoxGeometry(.9,.08,1.8), M.table, -1.05, .86, t.z);
+    add(new THREE.BoxGeometry(.5,.82,1.2), M.table, -1.05, .41, t.z);
+    shadow(1.4, 2.4, -1.05, t.z);
+    STACK_OFF.forEach(([x, dz], si) => {
+      const slot = `${t.id}-${si+1}`;
+      const g = new THREE.Group(); g.position.set(x, .9, t.z - dz);
+      const mats = [];
+      for (let k=0;k<3;k++){
+        const m = new THREE.MeshStandardMaterial({ map:T.fabric, roughness:.95 }); mats.push(m);
+        const b = new THREE.Mesh(stackGeo, m); b.position.y = .025 + k*.05; b.rotation.y = (rnd()-.5)*.08; b.position.x = (rnd()-.5)*.012;
+        b.userData.slot = slot; interactables.push(b); g.add(b);
+      }
+      scene.add(g);
+      state.slots[slot] = { type:'fold', group:g, mats, base:g.position.clone(), baseRot:0, t:0,
+        view:{ x:.1, z:g.position.z + 1.05, lookX:x, lookZ:g.position.z, pitch:-.5 } };
+      animated.push(slot);
+    });
+  });
+}
+
+/* ===== 商品をシーンに反映 ===== */
+function applyItems(){
+  for (const slot of ALL_SLOTS){
+    const s = state.slots[slot]; const it = state.items[slot];
+    if (!s) continue;
+    s.group.visible = !!it;
+    if (!it) continue;
+    const c = new THREE.Color(it.color);
+    if (!it.available) c.multiplyScalar(.45);
+    if (s.type === 'hang'){
+      s.mat.color.copy(c);
+      s.body.geometry = s.geo[SHAPES[it.kind] ? it.kind : 'tee'];
+    } else {
+      s.mats.forEach((m,i) => { m.color.copy(c).multiplyScalar(1 - i*.06); });
+    }
+  }
+}
+
+/* ===== Shopify Storefront API（あとで連携：在庫をリアルタイムにする） ===== */
+async function sf(query, variables={}){
+  const r = await fetch(`https://${SHOP.domain}/api/${SHOP.apiVersion}/graphql.json`, {
+    method:'POST', headers:{ 'Content-Type':'application/json', 'X-Shopify-Storefront-Access-Token':SHOP.storefrontToken },
+    body: JSON.stringify({ query, variables }) });
+  const j = await r.json();
+  if (j.errors) throw new Error(j.errors.map(e=>e.message).join(' / '));
+  return j.data;
+}
+const Q_PRODUCTS = `query($h:String!){ collection(handle:$h){ products(first:100){ nodes{
+  handle title createdAt description images(first:2){ nodes{ url } }
+  variants(first:20){ nodes{ id availableForSale price{ amount } selectedOptions{ name value } } } } } } }`;
+async function loadShopify(){
+  const d = await sf(Q_PRODUCTS, { h: SHOP.collectionHandle });
+  const nodes = d.collection ? d.collection.products.nodes : [];
+  return nodes.map(p => normalize({ h:p.handle, t:p.title, d:p.createdAt.slice(0,10), s:p.description.slice(0,90),
+    i:p.images.nodes.map(x => x.url.split('?')[0]),
+    v:p.variants.nodes.map(v => { const o = v.selectedOptions.find(o => /size|サイズ/i.test(o.name)) || v.selectedOptions[v.selectedOptions.length-1] || { value:'FREE' };
+      return [String(v.id).split('/').pop(), o.value, +v.price.amount, v.availableForSale]; }) }));
+}
+
+/* ===== カート（Shopifyのカートリンクでレジへ。APIなしで動く） ===== */
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
+function addToCart(slot, vid){
+  const it = state.items[slot]; if (!it) return;
+  const v = it.variants.find(v => String(v.id) === String(vid));
+  if (!v || !v.available){ toast('そのサイズは売り切れ'); return; }
+  const line = state.cart.find(l => String(l.vid) === String(vid));
+  if (line) line.qty = Math.min(line.qty + 1, 5); else state.cart.push({ vid:String(v.id), handle:it.handle, size:v.size, qty:1 });
+  saveCart(); renderCart(); toast(`カートに入れた：${it.title}（${v.size}）`); haptic(15);
+}
+function removeLine(vid){ state.cart = state.cart.filter(l => l.vid !== vid); saveCart(); renderCart(); }
+function saveCart(){ store.set('bkf_cart2', state.cart); }
+const checkoutUrl = () => `${SITE}/cart/${state.cart.map(l => `${l.vid}:${l.qty}`).join(',')}`;
+function renderCart(){
+  const rows = state.cart.map(l => ({ l, it:byHandle(l.handle) })).filter(x => x.it);
+  $('#cartCount').textContent = rows.reduce((a,x) => a + x.l.qty, 0);
+  const list = $('#cartList');
+  list.innerHTML = rows.length ? '' : '<div class="empty">まだ何も入ってない。<br>ラックを掘ってみて。</div>';
+  let total = 0;
+  for (const { l, it } of rows){
+    const v = it.variants.find(v => String(v.id) === l.vid) || { price:it.price };
+    total += v.price * l.qty;
+    const row = document.createElement('div'); row.className = 'cartRow';
+    row.innerHTML = `<img alt=""><div><div class="n"></div><div class="p"></div></div><button>削除</button>`;
+    setImg(row.querySelector('img'), it, 200);
+    row.querySelector('.n').textContent = it.title;
+    row.querySelector('.p').textContent = `${yen(v.price)}　SIZE ${l.size}${l.qty > 1 ? '　×' + l.qty : ''}`;
+    row.querySelector('button').onclick = () => removeLine(l.vid);
+    list.appendChild(row);
+  }
+  $('#cartTotal').textContent = yen(total);
+  const co = $('#checkout');
+  co.href = rows.length ? checkoutUrl() : '#'; co.style.opacity = rows.length ? 1 : .4;
+  $('#cartNote').textContent = 'レジに進むと、BONKNOW FREAKSのオンラインストア（Shopify）の決済画面に移動します。在庫はそこで最終確認されます。';
+}
+$('#checkout').addEventListener('click', e => { if (!state.cart.length) e.preventDefault(); });
+
+/* ===== 商品パネル ===== */
+let pickedVid = null;
+function openPanel(slot){
+  const it = state.items[slot]; if (!it) return;
+  state.selected = slot;
+  const p = $('#panel');
+  p.classList.toggle('isSold', !it.available);
+  const img = $('#pImg'); img.dataset.idx = 0; setImg(img, it, 900, 0);
+  $('#pDots').textContent = it.images.length > 1 ? '写真をタップで切り替え' : '';
+  $('#pSlot').textContent = `${it.zone}　/　${slot}`;
+  $('#pTitle').textContent = it.title;
+  $('#pPrice').textContent = yen(it.price) + '（税込）';
+  const first = it.variants.find(v => v.available);
+  pickedVid = first ? String(first.id) : null;
+  const box = $('#pSizes'); box.innerHTML = '';
+  for (const v of it.variants){
+    const b = document.createElement('button'); b.className = 'size' + (v.available ? '' : ' out') + (String(v.id) === pickedVid ? ' on' : '');
+    b.textContent = v.size; b.disabled = !v.available; b.title = v.available ? '' : '売り切れ';
+    b.onclick = () => { pickedVid = String(v.id); box.querySelectorAll('.size').forEach(x => x.classList.remove('on')); b.classList.add('on'); };
+    box.appendChild(b);
+  }
+  $('#pDesc').textContent = it.desc;
+  const add = $('#pAdd'); add.disabled = !it.available; add.textContent = it.available ? 'カートに入れる' : 'SOLD OUT';
+  const link = $('#pLink'); link.href = it.url; link.style.display = '';
+  p.classList.add('open'); p.setAttribute('aria-hidden','false');
+  $('#dig').classList.remove('show'); $('#tip').style.display = 'none';
+}
+function closePanel(silent){ state.selected = null; $('#panel').classList.remove('open'); $('#panel').setAttribute('aria-hidden','true'); if (!silent && typeof renderDig === 'function') renderDig(); }
+$('#panelClose').onclick = () => closePanel();
+$('#pAdd').onclick = () => { if (state.selected && pickedVid) addToCart(state.selected, pickedVid); };
+$('#pImg').onclick = () => { const it = state.items[state.selected]; if (!it || it.images.length < 2) return; const img = $('#pImg'); const n = (+img.dataset.idx + 1) % it.images.length; img.dataset.idx = n; setImg(img, it, 900, n); };
+$('#panel').addEventListener('pointerdown', e => e.stopPropagation());
+
+/* ===== 一覧 ===== */
+let listFilter = 'ALL', stockOnly = false;
+function renderList(){
+  const zones = ['ALL', ...RACKS.map(r=>r.id), ...TABLES.map(t=>t.id)];
+  $('#filter').innerHTML = '';
+  zones.forEach(z => { const b = document.createElement('button'); b.className = 'btn' + (z===listFilter?' on':''); b.textContent = z==='ALL' ? 'ALL' : ([...RACKS,...TABLES].find(x=>x.id===z).label); b.onclick = () => { listFilter = z; renderList(); }; $('#filter').appendChild(b); });
+  const st = document.createElement('button'); st.className = 'btn' + (stockOnly ? ' on' : ''); st.textContent = '在庫ありのみ'; st.onclick = () => { stockOnly = !stockOnly; renderList(); }; $('#filter').appendChild(st);
+  const grid = $('#grid'); grid.innerHTML = '';
+  ALL_SLOTS.filter(s => state.items[s] && (listFilter==='ALL' || s.startsWith(listFilter + '-')) && (!stockOnly || state.items[s].available)).forEach(s => {
+    const it = state.items[s];
+    const c = document.createElement('button'); c.className = 'card' + (it.available?'':' sold');
+    c.innerHTML = `<img alt="" loading="lazy"><div class="z"></div><div class="n"></div><div class="p"></div>`;
+    setImg(c.querySelector('img'), it, 400); c.querySelector('.z').textContent = `${it.zone}　${s}`; c.querySelector('.n').textContent = it.title;
+    c.querySelector('.p').textContent = it.available ? yen(it.price) : 'SOLD OUT';
+    c.onclick = () => { closeSheets(); enterDig(s); };
+    grid.appendChild(c);
+  });
+}
+function openSheet(id){ closePanel(); $(id).classList.add('open'); }
+function closeSheets(){ document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s || e.target.hasAttribute('data-close')) closeSheets(); }));
+$('#cartBtn').onclick = () => { renderCart(); openSheet('#cartSheet'); };
+$('#listBtn').onclick = () => { renderList(); openSheet('#listSheet'); };
+
+
+/* ===== 移動・視点（ゲーム的な操作） ===== */
+const ZONES = [...RACKS.map(r => ({ id:r.id, x:-2.55, z:r.z, w:.8, d:3.2, label:r.label })), ...TABLES.map(t => ({ id:t.id, x:-1.05, z:t.z, w:1.0, d:1.9, label:t.label }))];
+const zoneSlots = id => ALL_SLOTS.filter(s => s.startsWith(id + '-') && state.items[s]);
+const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function viewFor(slot){
+  const s = state.slots[slot];
+  if (s.type === 'hang'){
+    const half = Math.atan(Math.tan(camera.fov * D2R / 2) * camera.aspect);
+    const d = clamp(.42 / Math.tan(half), 1.15, 1.6);   // 服の幅と丈が画面に収まる距離
+    return { x:clamp(-2.13 + d, -1.0, -.53), z:s.base.z, yaw:Math.PI/2, pitch:-Math.atan(.55 / d) - .08 };
+  }
+  const v = s.view; return { x:v.x, z:v.z, yaw:Math.atan2(-(v.lookX - v.x), -(v.lookZ - v.z)), pitch:v.pitch };
+}
+function flyTo(x, z, yaw, pitch, onDone, dur=1.1){
+  const dy = wrapA(yaw - state.yaw);
+  state.walk = null; state.vel.set(0,0,0);
+  state.fly = { fx:state.pos.x, fz:state.pos.z, fy:state.yaw, fp:state.pitch, tx:x, tz:z, ty:state.yaw+dy, tp:pitch, t:0, dur, onDone };
+}
+function haptic(ms=8){ try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
+
+/* --- ディグモード：ラックの前で1着ずつめくる --- */
+function enterDig(slot){
+  const zone = slot.split('-')[0];
+  const list = zoneSlots(zone); if (!list.length) return;
+  state.dig = { zone, list, idx: Math.max(0, list.indexOf(slot)) };
+  state.hovered = null; closePanel(true);
+  document.body.classList.add('digging');
+  focusDig(1.0); haptic(12); hideCoach();
+}
+function focusDig(dur){
+  const d = state.dig, slot = d.list[d.idx], v = viewFor(slot);
+  flyTo(v.x, v.z, v.yaw, v.pitch, null, dur);
+  renderDig();
+}
+function flip(dir){
+  const d = state.dig; if (!d) return;
+  const n = d.idx + dir;
+  if (n < 0 || n >= d.list.length){ const c = $('#dig'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); haptic(25); return; }
+  d.idx = n; focusDig(.38); tick(); haptic();
+}
+function exitDig(){
+  if (!state.dig) return;
+  state.dig = null; document.body.classList.remove('digging'); closePanel(true); renderDig();
+  flyTo(clamp(state.pos.x + .7, -2, .1), state.pos.z, state.yaw, -.04, null, .6);
+}
+function digSlot(){ return state.dig ? state.dig.list[state.dig.idx] : null; }
+function renderDig(){
+  const el = $('#dig'), d = state.dig;
+  if (!d){ el.classList.remove('show'); return; }
+  const slot = digSlot(), it = state.items[slot], z = ZONES.find(z => z.id === d.zone);
+  $('#dZone').textContent = `${z.label}　${d.idx+1} / ${d.list.length}`;
+  $('#dTitle').textContent = it.title;
+  const av = it.variants.filter(v => v.available);
+  $('#dPrice').textContent = it.available ? `${yen(it.price)}　在庫 ${av.map(v => v.size).join(' / ')}` : 'SOLD OUT';
+  $('#dAdd').disabled = !it.available;
+  $('#dAdd').textContent = !it.available ? 'SOLD' : av.length > 1 ? 'サイズを選ぶ' : 'カートへ';
+  $('#dPrev').disabled = d.idx === 0; $('#dNext').disabled = d.idx === d.list.length - 1;
+  el.classList.toggle('show', !$('#panel').classList.contains('open'));
+}
+$('#dPrev').onclick = () => flip(-1);
+$('#dNext').onclick = () => flip(1);
+$('#dOpen').onclick = () => { const s = digSlot(); if (s) openPanel(s); };
+$('#dAdd').onclick = () => { const s = digSlot(); if (!s) return; const av = state.items[s].variants.filter(v => v.available); if (av.length === 1) addToCart(s, av[0].id); else openPanel(s); };
+$('#dExit').onclick = exitDig;
+
+/* --- 売り場ナビ --- */
+const NAV = [
+  { k:'IN', label:'入口', go:() => { if (state.dig){ state.dig = null; document.body.classList.remove('digging'); renderDig(); } flyTo(-1.6, 13.8, .14, -.02); } },
+  ...ZONES.map(z => ({ k:z.id, label:z.label.replace(/^\d+ — /,''), go:() => { const l = zoneSlots(z.id); if (l.length) enterDig(l[0]); } })),
+];
+NAV.forEach(n => { const b = document.createElement('button'); b.className = 'btn'; b.innerHTML = `<small>${n.k}</small>`; b.append(n.label); b.onclick = () => { closePanel(); n.go(); }; $('#nav').appendChild(b); });
+
+/* --- キーボード --- */
+const keys = {};
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (!state.started) return;
+  if (e.code === 'Escape'){ if ($('#panel').classList.contains('open')) closePanel(); else if (document.querySelector('.sheet.open')) closeSheets(); else exitDig(); }
+  if (state.dig && !$('#panel').classList.contains('open')){
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') flip(1);
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') flip(-1);
+    if (e.code === 'Enter' || e.code === 'Space'){ e.preventDefault(); openPanel(digSlot()); }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') exitDig();
+  }
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+/* --- 当たり判定 --- */
+function collide(p){
+  p.x = clamp(p.x, -2.0, .15);
+  p.z = clamp(p.z, -14.4, 14.4);
+  for (const t of TABLES){
+    const x0 = -1.75, x1 = -.35, z0 = t.z - 1.15, z1 = t.z + 1.15;
+    if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1){
+      const d = [[p.x - x0, 'x', x0], [x1 - p.x, 'x', x1], [p.z - z0, 'z', z0], [z1 - p.z, 'z', z1]].sort((a,b) => a[0]-b[0])[0];
+      p[d[1]] = d[2];
+    }
+  }
+}
+
+/* --- 移動（加減速・タップ移動・視点のなめらかさ） --- */
+const joy = { x:0, y:0, id:null, cx:0, cy:0 };
+let wheel = 0, bobT = 0, stuckT = 0;
+function updateMove(dt, rawDt){
+  if (state.fly){
+    const f = state.fly; f.t = Math.min(1, f.t + Math.min(rawDt, .25) / f.dur);
+    const e = f.t < .5 ? 4*f.t*f.t*f.t : 1 - Math.pow(-2*f.t+2, 3)/2;
+    state.pos.x = f.fx + (f.tx-f.fx)*e; state.pos.z = f.fz + (f.tz-f.fz)*e;
+    state.yaw = state.tyaw = f.fy + (f.ty-f.fy)*e; state.pitch = state.tpitch = f.fp + (f.tp-f.fp)*e;
+    if (f.t >= 1){ state.fly = null; f.onDone && f.onDone(); }
+    return;
+  }
+  let fwd = 0, side = 0, turn = 0;
+  if (!state.dig){
+    if (keys.KeyW || keys.ArrowUp) fwd += 1;
+    if (keys.KeyS || keys.ArrowDown) fwd -= 1;
+    if (keys.KeyA) side -= 1;
+    if (keys.KeyD) side += 1;
+    if (keys.ArrowLeft || keys.KeyQ) turn += 1;
+    if (keys.ArrowRight || keys.KeyE) turn -= 1;
+    fwd += -joy.y + wheel; side += joy.x;
+  }
+  wheel *= .85; if (Math.abs(wheel) < .01) wheel = 0;
+  state.tyaw += turn * 1.9 * dt;
+  const manual = Math.hypot(fwd, side) > .05;
+  if (manual){ state.walk = null; hideCoach(); }
+  const target = new THREE.Vector3();
+  if (state.walk){
+    const dx = state.walk.x - state.pos.x, dz = state.walk.z - state.pos.z, d = Math.hypot(dx, dz);
+    if (d < .12){ state.walk = null; marker.visible = false; }
+    else {
+      const sp = Math.min(2.6, d * 2 + .5);
+      target.set(dx/d*sp, 0, dz/d*sp);
+      state.tyaw += wrapA(Math.atan2(-dx, -dz) - state.tyaw) * Math.min(1, dt * 3.2);
+    }
+  } else if (manual){
+    let len = Math.hypot(fwd, side); if (len > 1){ fwd /= len; side /= len; len = 1; }
+    const run = keys.ShiftLeft || keys.ShiftRight || (joy.id !== null && Math.hypot(joy.x, joy.y) > .92);
+    const sp = run ? 4.6 : 2.8;
+    const sn = Math.sin(state.yaw), cs = Math.cos(state.yaw);
+    target.set((-sn*fwd + cs*side) * sp, 0, (-cs*fwd - sn*side) * sp);
+  }
+  const k = 1 - Math.exp(-dt * (target.lengthSq() > state.vel.lengthSq() ? 7 : 9));
+  state.vel.lerp(target, k);
+  const before = state.pos.clone();
+  state.pos.addScaledVector(state.vel, dt);
+  collide(state.pos);
+  if (state.walk){ stuckT = before.distanceTo(state.pos) < .002 ? stuckT + dt : 0; if (stuckT > .4){ state.walk = null; marker.visible = false; } }
+  const spd = state.vel.length();
+  bobT += dt * spd * 2.4;
+  state.bobAmp += ((spd > .2 ? 1 : 0) - state.bobAmp) * Math.min(1, dt * 5);
+  const ky = 1 - Math.exp(-dt * (IS_TOUCH ? 14 : 22));
+  state.yaw += wrapA(state.tyaw - state.yaw) * ky;
+  state.pitch += (state.tpitch - state.pitch) * ky;
+}
+
+/* --- タップで歩く先のマーカー --- */
+const marker = new THREE.Mesh(new THREE.RingGeometry(.16, .22, 40).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({ color:new THREE.Color(0x00e5ff).multiplyScalar(2), toneMapped:false, transparent:true, depthWrite:false }));
+marker.visible = false; marker.position.y = .01; scene.add(marker);
+function walkTo(x, z){
+  const p = new THREE.Vector3(x, 0, z); collide(p);
+  state.walk = { x:p.x, z:p.z }; stuckT = 0;
+  marker.position.set(p.x, .01, p.z); marker.visible = true; marker.userData.t = 0;
+}
+
+/* --- ポインター：左手スティック／右手で見回す／タップ --- */
+const ray = new THREE.Raycaster(); ray.far = 7;
+const ndc = new THREE.Vector2();
+const zoneBoxes = [];
+function addZoneBoxes(){
+  const inv = new THREE.MeshBasicMaterial({ visible:false });
+  for (const z of ZONES){ const m = new THREE.Mesh(new THREE.BoxGeometry(z.w, z.id[0]==='R' ? 1.9 : 1.1, z.d), inv); m.position.set(z.x, z.id[0]==='R' ? .95 : .55, z.z); m.userData.zone = z.id; scene.add(m); zoneBoxes.push(m); }
+}
+function rayAt(cx, cy){ ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); }
+function pickAt(cx, cy){
+  rayAt(cx, cy);
+  const hit = ray.intersectObjects(interactables, false).find(h => h.object.parent.visible);
+  return hit ? hit.object.userData.slot : null;
+}
+const floorPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+function handleTap(cx, cy){
+  const slot = pickAt(cx, cy);
+  if (slot){
+    if (state.dig && slot === digSlot()) openPanel(slot);
+    else if (state.dig && slot.startsWith(state.dig.zone + '-')){ const i = state.dig.list.indexOf(slot); if (i >= 0){ state.dig.idx = i; focusDig(.38); tick(); haptic(); } }
+    else enterDig(slot);
+    return;
+  }
+  const zh = ray.intersectObjects(zoneBoxes, false)[0];
+  if (zh){ const l = zoneSlots(zh.object.userData.zone); if (l.length){ enterDig(l[Math.floor(l.length/2)]); return; } }
+  if (state.dig) return;
+  const p = new THREE.Vector3();
+  if (ray.ray.intersectPlane(floorPlane, p) && p.distanceTo(state.pos) < 26){ walkTo(p.x, p.z); hideCoach(); }
+}
+const cvs = renderer.domElement;
+const ptrs = new Map();
+const joyEl = $('#joy'), knob = joyEl.querySelector('i');
+function joyStart(e){ joy.id = e.pointerId; joy.cx = e.clientX; joy.cy = e.clientY; joy.x = joy.y = 0; joyEl.style.left = (e.clientX - 60) + 'px'; joyEl.style.top = (e.clientY - 60) + 'px'; knob.style.transform = ''; joyEl.classList.add('on'); state.walk = null; marker.visible = false; }
+function joyMove(e){
+  let x = (e.clientX - joy.cx) / 52, y = (e.clientY - joy.cy) / 52; const l = Math.hypot(x, y);
+  if (l > 1){ // 指がはみ出したら土台ごと付いてくる
+    joy.cx += (x/l) * (l-1) * 52; joy.cy += (y/l) * (l-1) * 52; x /= l; y /= l;
+    joyEl.style.left = (joy.cx - 60) + 'px'; joyEl.style.top = (joy.cy - 60) + 'px';
+  }
+  const m = Math.hypot(x, y), dz = .12, s = m < dz ? 0 : (m - dz) / (1 - dz) / (m || 1);
+  joy.x = x * s; joy.y = y * s;
+  knob.style.transform = `translate(${x*36}px,${y*36}px)`;
+}
+function joyEnd(){ joy.id = null; joy.x = joy.y = 0; joyEl.classList.remove('on'); }
+
+cvs.addEventListener('pointerdown', e => {
+  if (!state.started) return;
+  cvs.setPointerCapture(e.pointerId);
+  const touch = e.pointerType !== 'mouse';
+  let role = 'look';
+  if (touch && !state.dig && joy.id === null && e.clientX < innerWidth * .45 && !state.fly) { role = 'joy'; joyStart(e); }
+  ptrs.set(e.pointerId, { role, sx:e.clientX, sy:e.clientY, x:e.clientX, y:e.clientY, t:e.timeStamp, moved:0 });
+});
+cvs.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId);
+  if (!p){
+    if (e.pointerType === 'mouse' && state.started && !state.fly){
+      const s = pickAt(e.clientX, e.clientY);
+      state.hovered = state.dig ? null : s;
+      cvs.style.cursor = s ? 'pointer' : 'grab';
+      const tip = $('#tip');
+      if (s && state.items[s] && !state.dig){ const it = state.items[s]; tip.innerHTML = ''; const n = document.createElement('div'); n.textContent = it.title; const pr = document.createElement('div'); pr.className = 'p'; pr.textContent = it.available ? yen(it.price) : 'SOLD OUT'; tip.append(n, pr); tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; tip.style.display = 'block'; }
+      else tip.style.display = 'none';
+    }
+    return;
+  }
+  const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+  p.moved += Math.abs(dx) + Math.abs(dy);
+  if (p.role === 'joy'){ joyMove(e); if (p.moved > 10) hideCoach(); return; }
+  if (state.dig || state.fly) return;
+  if (p.moved > 6){
+    const kk = e.pointerType === 'mouse' ? .0042 : .0058;
+    state.tyaw += dx * kk; state.tpitch = clamp(state.tpitch + dy * kk, -1.15, 1.0);
+    state.walk = null; marker.visible = false;
+    $('#tip').style.display = 'none'; hideCoach();
+  }
+});
+function endPtr(e, cancelled){
+  const p = ptrs.get(e.pointerId); if (!p) return; ptrs.delete(e.pointerId);
+  const dx = e.clientX - p.sx, dy = e.clientY - p.sy, dt = e.timeStamp - p.t;
+  const tap = !cancelled && p.moved < 10;
+  if (p.role === 'joy'){ joyEnd(); if (tap) handleTap(e.clientX, e.clientY); return; }
+  if (cancelled) return;
+  if (state.dig){
+    if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.2) flip(dx < 0 ? 1 : -1);
+    else if (dy > 70 && dy > Math.abs(dx) * 1.3) exitDig();
+    else if (tap) handleTap(e.clientX, e.clientY);
+    return;
+  }
+  if (tap) handleTap(e.clientX, e.clientY);
+}
+cvs.addEventListener('pointerup', e => endPtr(e, false));
+cvs.addEventListener('pointercancel', e => endPtr(e, true));
+cvs.addEventListener('pointerleave', () => { if (!ptrs.size){ state.hovered = null; $('#tip').style.display = 'none'; } });
+let wheelLock = 0;
+cvs.addEventListener('wheel', e => {
+  e.preventDefault(); if (state.fly) return;
+  if (state.dig){ const now = performance.now(); if (now - wheelLock > 220 && Math.abs(e.deltaY) > 4){ wheelLock = now; flip(e.deltaY > 0 ? 1 : -1); } return; }
+  wheel = clamp(wheel - e.deltaY * .004, -1.6, 1.6);
+}, { passive:false });
+
+/* --- ミニマップ（タップでその売り場へ） --- */
+const mapC = $('#map'), mapG = mapC.getContext('2d');
+let mapLast = 0;
+function sizeMap(){ const r = mapC.getBoundingClientRect(), dpr = Math.min(devicePixelRatio, 2); mapC.width = Math.round(r.width * dpr); mapC.height = Math.round(r.height * dpr); }
+const mx = z => (15 - z) / 30, my = x => (x + 3.3) / 3.9;
+function drawMap(now){
+  if (now - mapLast < 80) return; mapLast = now;
+  const W = mapC.width, H = mapC.height, g = mapG; if (!W) return;
+  const P = 6 * (W / mapC.clientWidth || 1), w = W - P*2, h = H - P*2;
+  const X = z => P + mx(z) * w, Y = x => P + my(x) * h;
+  g.clearRect(0,0,W,H);
+  g.fillStyle = 'rgba(10,11,16,.78)'; g.fillRect(0,0,W,H);
+  g.fillStyle = 'rgba(158,155,149,.25)'; g.fillRect(X(15), Y(-3.3), w, Y(.55) - Y(-3.3));
+  g.fillStyle = '#e8c22a'; g.fillRect(X(15), Y(.1), w, Math.max(1, h*.02));
+  g.fillStyle = 'rgba(31,48,93,.9)'; g.fillRect(X(15), Y(-3.3), w, Y(-2.9) - Y(-3.3));
+  for (const z of ZONES){
+    const on = state.dig && state.dig.zone === z.id;
+    g.fillStyle = on ? '#00e5ff' : (z.id[0] === 'R' ? 'rgba(242,239,230,.75)' : 'rgba(194,191,184,.6)');
+    g.fillRect(X(z.z + z.d/2), Y(z.x - z.w/2), X(z.z - z.d/2) - X(z.z + z.d/2), Y(z.x + z.w/2) - Y(z.x - z.w/2));
+  }
+  g.fillStyle = '#ff2bd6'; g.fillRect(X(-15) - 2, Y(.6), 3, h*.3);
+  const px = X(state.pos.z), py = Y(state.pos.x), sn = Math.sin(state.yaw), cs = Math.cos(state.yaw);
+  const fx = (cs) * w / 30, fy = (-sn) * h / 3.9; const fl = Math.hypot(fx, fy) || 1; // 向き（マップ上）
+  const dxm = fx / fl, dym = fy / fl, L = 16 * (W / mapC.clientWidth || 1);
+  g.fillStyle = 'rgba(0,229,255,.25)'; g.beginPath(); g.moveTo(px, py);
+  g.lineTo(px + (dxm*Math.cos(.5) - dym*Math.sin(.5))*L, py + (dxm*Math.sin(.5) + dym*Math.cos(.5))*L);
+  g.lineTo(px + (dxm*Math.cos(-.5) - dym*Math.sin(-.5))*L, py + (dxm*Math.sin(-.5) + dym*Math.cos(-.5))*L); g.fill();
+  g.fillStyle = '#00e5ff'; g.beginPath(); g.arc(px, py, 3.2 * (W / mapC.clientWidth || 1), 0, Math.PI*2); g.fill();
+}
+mapC.addEventListener('click', e => {
+  const r = mapC.getBoundingClientRect(), P = 6;
+  const u = (e.clientX - r.left - P) / (r.width - P*2), v = (e.clientY - r.top - P) / (r.height - P*2);
+  const z = 15 - u * 30, x = v * 3.9 - 3.3;
+  let best = null, bd = 1e9;
+  for (const zn of ZONES){ const d = Math.abs(zn.z - z) / (zn.d/2 + .4) + Math.abs(zn.x - x) / 1.4; if (d < bd){ bd = d; best = zn; } }
+  closePanel();
+  if (best && Math.abs(best.z - z) < best.d/2 + .4){ const l = zoneSlots(best.id); if (l.length){ enterDig(l[0]); return; } }
+  if (state.dig){ state.dig = null; document.body.classList.remove('digging'); renderDig(); }
+  walkTo(x, z);
+});
+
+/* --- 初回の操作ガイド --- */
+let coachShown = false;
+function showCoach(){ if (!IS_TOUCH) return; coachShown = true; $('#coach').classList.add('show'); setTimeout(hideCoach, 7000); }
+function hideCoach(){ if (coachShown) $('#coach').classList.remove('show'); }
+
+
+/* ===== サウンド（テクノのループをその場で生成） ===== */
+const audio = { ctx:null, on:false, next:0, step:0, lastKick:-9, timer:null };
+function startAudio(){
+  const A = audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  audio.master = A.createGain(); audio.master.gain.value = .32; audio.master.connect(A.destination);
+  const o = A.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 55;
+  const f = A.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 180; f.Q.value = 6;
+  const lfo = A.createOscillator(); lfo.frequency.value = .07; const lg = A.createGain(); lg.gain.value = 120; lfo.connect(lg).connect(f.frequency); lfo.start();
+  const g = A.createGain(); g.gain.value = .07; o.connect(f).connect(g).connect(audio.master); o.start();
+  const len = A.sampleRate * .3; audio.noise = A.createBuffer(1, len, A.sampleRate); const d = audio.noise.getChannelData(0); for (let i=0;i<len;i++) d[i] = Math.random()*2-1;
+  audio.next = A.currentTime + .1; schedule();
+}
+function kick(t){ const A = audio.ctx, o = A.createOscillator(), g = A.createGain(); o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t+.13); g.gain.setValueAtTime(.95, t); g.gain.exponentialRampToValueAtTime(.001, t+.32); o.connect(g).connect(audio.master); o.start(t); o.stop(t+.35); audio.lastKick = t; }
+function hat(t, v, dur=.04){ const A = audio.ctx, s = A.createBufferSource(), f = A.createBiquadFilter(), g = A.createGain(); s.buffer = audio.noise; f.type = 'highpass'; f.frequency.value = 7500; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t+dur); s.connect(f).connect(g).connect(audio.master); s.start(t); s.stop(t+dur+.02); }
+function whoosh(){ if (!audio.on) return; const A = audio.ctx, t = A.currentTime, s = A.createBufferSource(), f = A.createBiquadFilter(), g = A.createGain(); s.buffer = audio.noise; s.loop = true; f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(200, t); f.frequency.exponentialRampToValueAtTime(1400, t+7); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.25, t+7); g.gain.exponentialRampToValueAtTime(.0001, t+9.5); s.connect(f).connect(g).connect(audio.master); s.start(t); s.stop(t+10); }
+function tick(){ if (!audio.on) return; const A = audio.ctx, t = A.currentTime; hat(t, .18, .025); const o = A.createOscillator(), g = A.createGain(); o.type = 'square'; o.frequency.setValueAtTime(1800, t); o.frequency.exponentialRampToValueAtTime(600, t + .03); g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.001, t + .05); o.connect(g).connect(audio.master); o.start(t); o.stop(t + .06); }
+function schedule(){
+  const A = audio.ctx, spb = 60/124/4;
+  while (audio.next < A.currentTime + .2){
+    const st = audio.step % 16;
+    if (st % 4 === 0) kick(audio.next);
+    if (st % 4 === 2) hat(audio.next, .14, .06); else if (st % 2 === 1) hat(audio.next, .045);
+    if (st === 12 && (audio.step >> 4) % 2) hat(audio.next, .09, .18);
+    audio.next += spb; audio.step++;
+  }
+  audio.timer = setTimeout(schedule, 50);
+}
+$('#soundBtn').onclick = async () => {
+  try {
+    if (!audio.ctx) startAudio();
+    audio.on = !audio.on;
+    if (audio.on) await audio.ctx.resume(); else await audio.ctx.suspend();
+  } catch(e){ audio.on = false; toast('サウンドを再生できなかった'); }
+  $('#soundBtn').textContent = audio.on ? '♪ ON' : '♪ OFF';
+  $('#soundBtn').classList.toggle('on', audio.on);
+};
+const beat = () => audio.on && audio.ctx ? Math.exp(-(audio.ctx.currentTime - audio.lastKick) * 7) : 0;
+
+/* ===== 発車標 ===== */
+const BOARD_MSG = '終電は行きました。ここからはディグの時間。　──　01 OUTER　/　02 HOODIE & KNIT　/　03 WIDE PANTS　/　04 SWEAT PANTS　/　TABLE: TEE・SHORTS・BAGS　──　DIG, SAMPLE, REBUILD.　──　';
+function drawBoard(now){
+  const b = state.board; if (now - b.last < 60) return; b.last = now;
+  const g = b.g, w = 1024, h = 192;
+  g.fillStyle = '#050505'; g.fillRect(0,0,w,h);
+  g.fillStyle = '#ffb000'; g.shadowColor = '#ff8800'; g.shadowBlur = 8; g.textBaseline = 'middle';
+  g.font = '700 46px "Space Mono", monospace'; g.fillText('1', 26, 50); g.fillText('BONKNOW FREAKS LINE', 80, 50);
+  const t = new Date(); const hh = String(t.getHours()).padStart(2,'0'), mm = String(t.getMinutes()).padStart(2,'0');
+  g.textAlign = 'right'; g.fillText(`${hh}:${mm}`, w-26, 50); g.textAlign = 'left';
+  g.font = '700 44px "Noto Sans JP", sans-serif';
+  const tw = g.measureText(BOARD_MSG).width; b.x = (b.x + 7) % tw;
+  g.fillText(BOARD_MSG, 26 - b.x, 136); g.fillText(BOARD_MSG, 26 - b.x + tw, 136);
+  g.shadowBlur = 0; g.fillStyle = 'rgba(0,0,0,.55)';
+  for (let x=0;x<w;x+=6) g.fillRect(x,0,2,h);
+  for (let y=0;y<h;y+=6) g.fillRect(0,y,w,2);
+  b.tex.needsUpdate = true;
+}
+
+/* ===== ループ ===== */
+const clock = new THREE.Clock();
+function updateTrain(time){
+  const tr = state.train, cyc = time % 32;
+  let z = -48, k = 0;
+  if (cyc < 9){ const p = cyc / 9; z = -48 + 30*p*p*(3-2*p) ; k = p; }
+  else if (cyc < 11){ z = -18; k = 1 * (Math.random() < .92 ? 1 : .3); }
+  else if (cyc < 12.5){ z = -18; k = 1 - (cyc-11)/1.5; }
+  tr.group.position.z = z; tr.light.intensity = k * 14; tr.mat.opacity = k;
+  if (cyc < .03 && !tr.played){ tr.played = true; whoosh(); } if (cyc > 1) tr.played = false;
+}
+function frame(){
+  const rawDt = clock.getDelta(), dt = Math.min(rawDt, .05), time = clock.elapsedTime;
+  updateMove(dt, rawDt);
+  const bob = Math.sin(bobT) * .022 * state.bobAmp, sway = Math.cos(bobT * .5) * .012 * state.bobAmp;
+  camera.position.set(state.pos.x + Math.cos(state.yaw) * sway, 1.6 + bob, state.pos.z - Math.sin(state.yaw) * sway);
+  camera.rotation.set(state.pitch, state.yaw, -sway * .25);
+  if (marker.visible){ marker.userData.t += dt; const s = 1 + Math.sin(marker.userData.t * 6) * .12; marker.scale.set(s, 1, s); }
+  drawMap(performance.now());
+  for (const slot of animated){
+    const s = state.slots[slot];
+    const target = (slot === state.hovered || slot === state.selected || slot === digSlot()) ? 1 : 0;
+    s.t += (target - s.t) * Math.min(1, dt * 9);
+    if (s.type === 'hang'){
+      s.group.rotation.y = s.t * Math.PI/2;
+      s.group.position.x = s.base.x + s.t * .42;
+      s.group.position.y = s.base.y + s.t * .03;
+    } else {
+      s.group.position.y = s.base.y + s.t * .07;
+      s.group.rotation.y = s.t * .3;
+    }
+  }
+  const b = beat();
+  state.mag.intensity = 1.6 + Math.sin(time*.8)*.6 + b*7;
+  state.ledMat.color.setRGB(0, .9 + b*1.6, 1.6 + b*2);
+  updateTrain(time);
+  drawBoard(performance.now());
+  composer.render();
+  requestAnimationFrame(frame);
+}
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); sizeMap();
+});
+
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
+
+/* ===== 起動 ===== */
+(async function main(){
+  try {
+    await Promise.race([ Promise.all(['34px "Archivo Black"','700 20px "Space Mono"','700 40px "Noto Sans JP"'].map(f => document.fonts.load(f))), new Promise(r => setTimeout(r, 2500)) ]);
+  } catch(e){}
+  build();
+  addZoneBoxes();
+  let list = CATALOG.map(normalize);
+  if (SHOPIFY_ON){ try { list = await loadShopify(); } catch(e){ toast('最新の在庫を取れなかったので、保存済みのデータで表示中'); } }
+  state.items = allocate(list);
+  applyItems();
+  state.cart = (store.get('bkf_cart2') || []).filter(l => byHandle(l.handle));
+  renderCart();
+  if (IS_TOUCH){ $('#howTo').innerHTML = '左手で歩いて、右手で見回す。<br>服をタップすると、ラックを1着ずつ掘れるよ。'; $('#dHint').textContent = '← スワイプでめくる →'; }
+  sizeMap();
+  const enter = $('#enter'); enter.disabled = false; enter.textContent = 'ENTER';
+  enter.onclick = () => { state.started = true; $('#intro').classList.add('hide'); cvs.style.cursor = 'grab'; setTimeout(() => toast('ようこそ、終電後のBONKNOW FREAKS駅へ'), 500); showCoach(); };
+  frame();
+})().catch(e => { console.error(e); $('#err').style.display = 'flex'; $('#err').textContent = '読み込みに失敗しました：' + e.message; });
+</script>
+</body>
+</html>
