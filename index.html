@@ -765,7 +765,7 @@ function addLookPanels(){
 }
 
 /* ===== Blenderの作り方で起こした服の3Dモデル（B）＋ アウターは商品写真の柄（C） ===== */
-const GARMENT_GLB = 'assets/garments.glb?v=2';
+const GARMENT_GLB = 'assets/garments.glb?v=3';
 const PHOTO_TEX = new Set(['type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-red','type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-black','type-006-bomber-armor-black','type-006-bomber-armor-olive','type-001-sweat-trucker-jacket-fadedyellow','type-001-sweat-trucker-jacket-ashgray','type-001-sweat-trucker-jacket-washedblack','faded-corduroy-w-tailor-riders-docking-jacket-black','type-001-sweat-trucker-jacket-1','type-001-sweat-trucker-jacket']);
 const photoTexCache = {};
 let GX = null, clothTex = null;
@@ -785,7 +785,7 @@ async function loadGarments(){
     const s = state.slots[slot]; if (!s) continue;
     if (s.type === 'hang'){
       for (const k of Object.keys(s.geo)) if (GX[k]) s.geo[k] = GX[k];
-      s.mat.map = clothTex; s.mat.roughness = .92; s.mat.needsUpdate = true;
+      s.mat.map = clothTex; s.mat.roughness = .92; s.mat.side = THREE.DoubleSide; s.mat.needsUpdate = true;
     } else {
       s.group.children.forEach((b, k) => { if (!b.isMesh) return; b.geometry = GX.fold; b.position.y = .023 + k*.05; b.rotation.y = (k-1)*.035; });
       s.mats.forEach(m => { m.map = clothTex; m.needsUpdate = true; });
