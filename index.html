@@ -157,7 +157,7 @@ body.digging #backBtn{display:flex}
 #dig .dsz button:not(:disabled):active{background:var(--red);border-color:var(--red)}
 #dig .dsz button:disabled{opacity:.3;text-decoration:line-through}
 #dig .dsz button.in{border-color:var(--cyan);color:var(--cyan)}
-#dig .dsz .lbl{width:100%;text-align:center;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em}
+#dig .dsz .lbl{width:100%;text-align:center;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.65);letter-spacing:.08em}
 #dig .dsz .soldout{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.55);padding:10px}
 #dig .dmore{display:flex;justify-content:center;gap:8px;margin-top:8px}
 #dig .dmore button{font-size:12px;padding:8px 12px;border:1px solid rgba(255,255,255,.18);border-radius:3px;color:rgba(255,255,255,.85)}
@@ -203,7 +203,7 @@ body.digging #backBtn{display:flex}
     <button class="arr" id="dNext" aria-label="次の服">›</button>
   </div>
   <div class="dsz" id="dSizes"></div>
-  <div class="dmore"><button id="dOpen">詳細・写真を見る</button></div>
+  <div class="dmore"><button id="dOpen" class="cta" style="flex:none;padding:12px 22px">詳細・サイズを選ぶ</button></div>
   <div class="foot"><span id="dHint">← → でめくる　ENTER 詳細</span><button id="dExit">↓ もどる</button></div>
 </div>
 <div id="tip"></div>
@@ -1021,16 +1021,9 @@ function renderDig(){
   $('#dTitle').textContent = it.title;
   $('#dPrice').textContent = it.available ? `${yen(it.price)}（税込）` : 'SOLD OUT';
   const box = $('#dSizes'); box.innerHTML = '';
-  if (it.available){
-    const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = 'サイズをタップでカートへ'; box.appendChild(lbl);
-    for (const v of it.variants){
-      const b = document.createElement('button'); const inCart = state.cart.some(l => l.vid === String(v.id));
-      b.textContent = (inCart ? '✓ ' : '') + v.size; b.disabled = !v.available; if (inCart) b.classList.add('in');
-      b.title = v.available ? `${v.size}をカートに入れる` : '売り切れ';
-      b.onclick = () => { addToCart(slot, v.id, 'dig'); renderDig(); };
-      box.appendChild(b);
-    }
-  } else { const s2 = document.createElement('div'); s2.className = 'soldout'; s2.textContent = 'このアイテムは売り切れ。詳細から商品ページは見られるよ'; box.appendChild(s2); }
+  const lbl = document.createElement('div'); lbl.className = 'lbl';
+  lbl.textContent = it.available ? '在庫 ' + it.variants.map(v => v.available ? v.size : `${v.size}×`).join('  ') : 'このアイテムは売り切れ';
+  box.appendChild(lbl);
   $('#dPrev').disabled = d.idx === 0; $('#dNext').disabled = d.idx === d.list.length - 1;
   el.classList.toggle('show', !$('#panel').classList.contains('open'));
 }
