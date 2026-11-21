@@ -811,6 +811,7 @@ async function loadGarments(){
 
 /* ===== スタッフ：店長タクロー（Blenderで作ったパーツをWeb側で動かす） ===== */
 const TK_GLB = 'assets/takuro.glb?v=1';
+const TK_HUMAN_GLB = 'assets/takuro_human.glb?v=1';
 const TK_HOME = { x:-2.15, z:-12.55, yaw:.45 };
 const TK_LANE = -.25;
 const TK_LINES = [
@@ -824,42 +825,59 @@ const TK_COL = { head:0xb87a5c, scalp:0x8f5b43, ear:0xb87a5c, nose:0xb07355, eye
 const tk = { ready:false, root:null, j:{}, props:{}, pos:new THREE.Vector3(TK_HOME.x,0,TK_HOME.z), yaw:TK_HOME.yaw, tyaw:TK_HOME.yaw,
   mode:'idle', t:0, path:[], task:null, taskT:0, next:15, pose:{}, talk:null, lastLine:-1, hits:[] };
 async function loadTakuro(){
-  const gltf = await new GLTFLoader().loadAsync(TK_GLB);
+  const loader = new GLTFLoader(); const draco = new DRACOLoader(); draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); loader.setDRACOLoader(draco);
+  const [human, parts] = await Promise.all([loader.loadAsync(TK_HUMAN_GLB), loader.loadAsync(TK_GLB)]);
   const meshes = {};
-  gltf.scene.traverse(o => { if (o.isMesh){ o.updateWorldMatrix(true,false); const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); meshes[o.name] = g; } });
-  const mats = {};
-  const mat = key => mats[key] || (mats[key] = new THREE.MeshStandardMaterial({ color:TK_COL[key] ?? 0xff00ff, roughness: key==='scalp'||key==='head' ? .55 : .85, metalness:0 }));
+  parts.scene.traverse(o => { if (o.isMesh){ o.updateWorldMatrix(true,false); const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); meshes[o.name] = g; } });
+  const mat = key => new THREE.MeshStandardMaterial({ color:TK_COL[key] ?? 0xff00ff, roughness:.85 });
   const root = new THREE.Group(); root.name = 'Takuro';
-  const J = (name, parent, px, py, pz) => { const g = new THREE.Group(); g.name = name; g.userData.pivot = new THREE.Vector3(px,py,pz);
-    const pp = parent.userData.pivot || new THREE.Vector3(); g.position.set(px-pp.x, py-pp.y, pz-pp.z); parent.add(g); tk.j[name] = g; return g; };
-  const pelvis = J('pelvis', root, 0, .95, -.01);
-  const spine = J('spine', pelvis, 0, .95, -.01);
-  const head = J('head', spine, 0, 1.5, -.008);
-  const shL = J('shL', spine, .225, 1.41, -.01), elL = J('elL', shL, .26, 1.13, -.01);
-  const shR = J('shR', spine, -.225, 1.41, -.01), elR = J('elR', shR, -.26, 1.13, -.01);
-  const legL = J('legL', pelvis, .1, .95, -.01), legR = J('legR', pelvis, -.1, .95, -.01);
-  const handR = J('handR', elR, -.26, .83, 0), handL = J('handL', elL, .26, .83, 0);
-  const put = (name, group) => { const g = meshes[name]; if (!g) return; const key = name.slice(3).replace(/[LR]$/,'');
-    const m = new THREE.Mesh(g.clone().translate(...group.userData.pivot.clone().negate().toArray()), mat(key)); m.castShadow = false; group.add(m); tk.hits.push(m); return m; };
-  put('TK_waist', pelvis);
-  ['TK_torso','TK_tag','TK_neck'].forEach(n => put(n, spine));
-  ['TK_head','TK_scalp','TK_earL','TK_earR','TK_nose','TK_eyeL','TK_eyeR','TK_browL','TK_browR','TK_mouth','TK_goatee'].forEach(n => put(n, head));
+  const model = human.scene; model.scale.setScalar(1.03); root.add(model);
+  const bones = {};
+  model.traverse(o => {
+    if (o.isBone){ bones[o.name] = o; bones[o.name.replace(/[LR]$/, m => '.'+m)] = o; }
+    if (o.isMesh){
+      o.frustumCulled = false; tk.hits.push(o);
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      ms.forEach(m => { m.side = THREE.DoubleSide;
+        if (/body|ears|lips/.test(m.name)) m.color.setHex(0xd8a585);
+        if (/tee/.test(m.name)){ m.color.setHex(0x141416); m.roughness = .9; }
+        if (/pants/.test(m.name)){ m.color.setHex(0x9c8768); m.roughness = .95; }
+        if (/eye/i.test(m.name)) m.color.setHex(0x120d0a);
+        m.needsUpdate = true; });
+    }
+  });
+  tk.bones = bones; tk.root = root;
+  root.position.copy(tk.pos); root.rotation.y = tk.yaw; scene.add(root);
+  root.updateMatrixWorld(true);
+  // A字ポーズの腕を体の横に下ろした姿勢を「ニュートラル」にする
+  const rootQinv = () => root.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const parentQ = b => rootQinv().multiply(b.parent.getWorldQuaternion(new THREE.Quaternion()));
+  const rotRoot = (b, axis, ang) => { const ax = axis.clone().applyQuaternion(parentQ(b).invert()); b.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(ax, ang)); b.updateMatrixWorld(true); };
   for (const sd of ['L','R']){
-    put('TK_sleeve'+sd, tk.j['sh'+sd]); put('TK_uarm'+sd, tk.j['sh'+sd]);
-    put('TK_farm'+sd, tk.j['el'+sd]); put('TK_hand'+sd, tk.j['el'+sd]);
-    ['TK_thigh','TK_shoe','TK_sole'].forEach(n => put(n+sd, tk.j['leg'+sd]));
+    const ua = bones['upperarm01.'+sd], la = bones['lowerarm01.'+sd];
+    const p0 = ua.getWorldPosition(new THREE.Vector3()), p1 = la.getWorldPosition(new THREE.Vector3());
+    root.worldToLocal(p0); root.worldToLocal(p1);
+    const d = p1.sub(p0); const ang = Math.atan2(Math.abs(d.x), -d.y);       // 垂直からの開き
+    rotRoot(ua, new THREE.Vector3(0,0,1), sd === 'L' ? -(ang - .1) : (ang - .1));
   }
-  // 小道具：ほうき（右手）と畳む服（両手の間）
+  const ctrl = ['spine04','spine03','spine02','neck01','head','upperarm01.L','upperarm01.R','lowerarm01.L','lowerarm01.R','upperleg01.L','upperleg01.R','lowerleg01.L','lowerleg01.R'];
+  tk.neutral = {};
+  for (const n of ctrl){ const b = bones[n]; if (!b) continue; tk.neutral[n] = { q0:b.quaternion.clone(), pInv:parentQ(b).invert() }; }
+  tk.modelY = model.position.y;
+  // 小道具：ほうき・畳む服・スニーカー
   meshes.TK_broomStick.translate(-.9, -.82, 0); meshes.TK_broomHead.translate(-.9, -.82, 0); meshes.TK_cloth.translate(-.9, 0, 0);
   const broom = new THREE.Group();
-  broom.add(new THREE.Mesh(meshes.TK_broomStick, mat('broomStick')));
-  const bh = new THREE.Mesh(meshes.TK_broomHead.clone(), mat('broomHead')); broom.add(bh);
-  broom.position.set(0, .02, 0); broom.rotation.set(.82, 0, 0); broom.visible = false; handR.add(broom);
-  // ほうきは柄の中ほどを握る
+  broom.add(new THREE.Mesh(meshes.TK_broomStick, mat('broomStick')), new THREE.Mesh(meshes.TK_broomHead, mat('broomHead')));
+  broom.visible = false; scene.add(broom);
   const cloth = new THREE.Mesh(meshes.TK_cloth, mat('cloth')); cloth.visible = false; scene.add(cloth);
-  tk.props = { broom, cloth };
-  root.position.copy(tk.pos); root.rotation.y = tk.yaw; scene.add(root);
-  tk.root = root; tk.ready = true; tk.next = 8 + Math.random()*8;
+  const shoes = {};
+  for (const sd of ['L','R']){
+    const g = new THREE.Group();
+    for (const n of ['TK_shoe','TK_sole']){ const m = meshes[n+sd].clone(); m.computeBoundingBox(); const c = m.boundingBox.getCenter(new THREE.Vector3()); m.translate(-c.x, -m.boundingBox.min.y, -c.z); g.add(new THREE.Mesh(m, mat(n.slice(3)))); }
+    g.scale.set(.9, .85, .85); scene.add(g); shoes[sd] = g;
+  }
+  tk.props = { broom, cloth, shoes };
+  tk.ready = true; tk.next = 8 + Math.random()*8;
 }
 /* ---- ポーズ（関節の角度）---- */
 const sn = Math.sin, cs = Math.cos;
@@ -916,15 +934,24 @@ function tkPose(name, t){
   }
   return P;
 }
-function tkApply(P){
-  const j = tk.j;
-  j.pelvis.position.y = .95 + P.pelvisY;
-  j.spine.rotation.set(P.spineX, P.spineY, P.spineZ);
-  j.head.rotation.set(P.headX, P.headY, P.headZ);
-  j.shL.rotation.set(P.shLX, P.shLY, P.shLZ); j.elL.rotation.set(P.elLX, 0, 0);
-  j.shR.rotation.set(P.shRX, P.shRY, P.shRZ); j.elR.rotation.set(P.elRX, 0, 0);
-  j.legL.rotation.set(P.legLX, 0, 0); j.legR.rotation.set(P.legRX, 0, 0);
+const _ax = { x:new THREE.Vector3(1,0,0), y:new THREE.Vector3(0,1,0), z:new THREE.Vector3(0,0,1) }, _q = new THREE.Quaternion(), _v = new THREE.Vector3();
+function tkBone(n, x, y, z){
+  const b = tk.bones[n], N = tk.neutral[n]; if (!b || !N) return;
+  b.quaternion.copy(N.q0);
+  if (z) b.quaternion.premultiply(_q.setFromAxisAngle(_v.copy(_ax.z).applyQuaternion(N.pInv), z));
+  if (y) b.quaternion.premultiply(_q.setFromAxisAngle(_v.copy(_ax.y).applyQuaternion(N.pInv), y));
+  if (x) b.quaternion.premultiply(_q.setFromAxisAngle(_v.copy(_ax.x).applyQuaternion(N.pInv), x));
 }
+function tkApply(P){
+  tk.root.children[0].position.y = tk.modelY + P.pelvisY;
+  for (const n of ['spine04','spine03','spine02']) tkBone(n, P.spineX/3, P.spineY/3, P.spineZ/3);
+  tkBone('neck01', P.headX*.4, P.headY*.4, P.headZ*.4); tkBone('head', P.headX*.6, P.headY*.6, P.headZ*.6);
+  tkBone('upperarm01.L', P.shLX, P.shLY, P.shLZ - .07); tkBone('upperarm01.R', P.shRX, P.shRY, P.shRZ + .07);
+  tkBone('lowerarm01.L', P.elLX, 0, 0); tkBone('lowerarm01.R', P.elRX, 0, 0);
+  tkBone('upperleg01.L', P.legLX, 0, 0); tkBone('upperleg01.R', P.legRX, 0, 0);
+  tkBone('lowerleg01.L', Math.max(0, -P.legLX)*.6, 0, 0); tkBone('lowerleg01.R', Math.max(0, -P.legRX)*.6, 0, 0);
+}
+function tkHandPos(sd, out){ return tk.bones['wrist.'+sd].getWorldPosition(out); }
 /* ---- 店長業務 ---- */
 const TK_TASKS = () => [
   ...TABLES.map(t => ({ kind:'fold', x:-.42, z:t.z + (Math.random()-.5)*.8, yaw:-Math.PI/2, dur:8 + Math.random()*4 })),
@@ -1009,11 +1036,21 @@ function updateTakuro(dt, time){
   // 体の向きをなめらかに
   tk.yaw += wrapA(tk.tyaw - tk.yaw) * Math.min(1, dt*5);
   tk.root.position.set(tk.pos.x, 0, tk.pos.z); tk.root.rotation.y = tk.yaw;
-  tkApply(tkPose(pose, pt));
+  const PP = tkPose(pose, pt); tk.j_sweepYaw = pose === 'sweep' ? PP.spineY : 0; tkApply(PP);
+  tk.root.updateMatrixWorld(true);
   if (tk.props.cloth.visible){
-    const hL = tk.j.handL.getWorldPosition(new THREE.Vector3()), hR = tk.j.handR.getWorldPosition(new THREE.Vector3());
-    tk.props.cloth.position.copy(hL).add(hR).multiplyScalar(.5); tk.props.cloth.position.y -= .03;
+    const hL = tkHandPos('L', new THREE.Vector3()), hR = tkHandPos('R', new THREE.Vector3());
+    tk.props.cloth.position.copy(hL).add(hR).multiplyScalar(.5); tk.props.cloth.position.y -= .04;
     tk.props.cloth.rotation.set(0, tk.yaw, 0); tk.props.cloth.rotateX(.3*Math.sin(tk.taskT*1.1*Math.PI*2));
+  }
+  if (tk.props.broom.visible){
+    const h = tkHandPos('R', new THREE.Vector3());
+    tk.props.broom.position.copy(h); tk.props.broom.rotation.set(0, tk.yaw + tk.j_sweepYaw, 0); tk.props.broom.rotateX(.42);
+  }
+  for (const sd of ['L','R']){
+    const f = tk.bones['foot.'+sd]; if (!f) continue; const p = f.getWorldPosition(new THREE.Vector3());
+    const g = tk.props.shoes[sd]; g.position.set(p.x, Math.max(0, p.y - .085), p.z); g.rotation.set(0, tk.yaw, 0);
+    const fwd = new THREE.Vector3(0,0,.045).applyAxisAngle(new THREE.Vector3(0,1,0), tk.yaw); g.position.add(fwd);
   }
   // 名札と吹き出し
   const sc = tkScreen(1.92);
