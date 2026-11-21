@@ -33,7 +33,7 @@ create policy "store can insert events" on public.events
     type in ('session_start','session_end','enter','pos','move_method','nav','dig_enter','dig_view','dig_exit',
              'product_open','size_select','photo_next','product_page_click','add_to_cart','remove_from_cart',
              'cart_open','checkout_click','list_open','list_pick','sound',
-             'search','search_pick','back','share_copy','deeplink')
+             'search','search_pick','back','share_copy','deeplink','staff_talk')
   );
 -- select / update / delete のポリシーは作らない（= 外からは読めない・消せない）
 

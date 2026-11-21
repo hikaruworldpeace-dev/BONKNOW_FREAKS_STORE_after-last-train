@@ -178,6 +178,15 @@ body.digging #backBtn{display:flex}
 #app::after{content:'';position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity 1.2s;
   background:radial-gradient(ellipse 75% 70% at 50% 48%,transparent 55%,rgba(4,4,8,.55) 100%);}
 body.cine #app::after{opacity:1}
+
+#tkTag{position:fixed;left:0;top:0;z-index:6;transform:translate(-50%,-100%);pointer-events:auto;display:none;cursor:pointer;
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:#fff;background:rgba(10,11,16,.78);border:1px solid rgba(255,255,255,.25);padding:5px 9px 5px 8px;border-radius:2px;white-space:nowrap}
+#tkTag b{color:var(--cyan);font-weight:400;margin-right:6px}
+#tkTag:hover{border-color:var(--cyan)}
+#tkBubble{position:fixed;left:0;top:0;z-index:7;transform:translate(-50%,-100%);display:none;pointer-events:none;max-width:min(78vw,320px);
+  background:var(--paper);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.55;font-weight:500;padding:11px 14px 12px;border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#tkBubble::after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-bottom:0;border-top-color:var(--paper)}
+#tkBubble .n{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:#6b6b6b;margin-bottom:3px}
 </style>
 </head>
 <body>
@@ -210,6 +219,8 @@ body.cine #app::after{opacity:1}
 </div>
 <div id="tip"></div>
 <div id="toast"></div>
+<div id="tkTag"><b>STAFF</b>タクロー</div>
+<div id="tkBubble"><span class="n">店長 タクロー</span><span class="t"></span></div>
 
 <aside id="panel" aria-hidden="true">
   <div class="grab"></div><button class="close" id="panelClose" aria-label="閉じる">×</button>
@@ -741,6 +752,7 @@ async function loadStation(onProgress){
   state.baked = true;
   addLookPanels();
   try { await loadGarments(); } catch(e){ console.warn('garments', e); }
+  loadTakuro().catch(e => console.warn('takuro', e));
 }
 
 /* ===== 線路側の壁：ルック写真のポスター（サイト側で貼るので差し替えはファイル交換だけ） ===== */
@@ -796,6 +808,225 @@ async function loadGarments(){
   state.garments3d = true;
   applyItems();
 }
+
+/* ===== スタッフ：店長タクロー（Blenderで作ったパーツをWeb側で動かす） ===== */
+const TK_GLB = 'assets/takuro.glb?v=1';
+const TK_HOME = { x:-2.15, z:-12.55, yaw:.45 };
+const TK_LANE = -.25;
+const TK_LINES = [
+  { id:'greet',  text:'こんにちは！お好みの服があれば教えてください！', poses:[['greet',0]] },
+  { id:'sulk',   text:'・・・店長とは名ばかりだよ、ほんと・・・おっと！いらっしゃいませ！', poses:[['sulk',0],['oops','おっと']] },
+  { id:'hangover', text:'・・・昨日の酒が・・・おっと、いらっしゃいませ・・・', poses:[['hangover',0],['weakbow','おっと']] },
+];
+const TK_COL = { head:0xb87a5c, scalp:0x8f5b43, ear:0xb87a5c, nose:0xb07355, eye:0x0c0c0c, brow:0x1c1410, mouth:0x6a2c24, goatee:0x1e1612, neck:0xb37657,
+  torso:0x141416, sleeve:0x141416, tag:0xe9e6dc, uarm:0xb87a5c, farm:0xb87a5c, hand:0xb87a5c, waist:0x9a8466, thigh:0x9c8768, shoe:0xe6e4dc, sole:0x1a1a1a,
+  broomStick:0x8a6234, broomHead:0xb59a52, cloth:0x7d2a22 };
+const tk = { ready:false, root:null, j:{}, props:{}, pos:new THREE.Vector3(TK_HOME.x,0,TK_HOME.z), yaw:TK_HOME.yaw, tyaw:TK_HOME.yaw,
+  mode:'idle', t:0, path:[], task:null, taskT:0, next:15, pose:{}, talk:null, lastLine:-1, hits:[] };
+async function loadTakuro(){
+  const gltf = await new GLTFLoader().loadAsync(TK_GLB);
+  const meshes = {};
+  gltf.scene.traverse(o => { if (o.isMesh){ o.updateWorldMatrix(true,false); const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); meshes[o.name] = g; } });
+  const mats = {};
+  const mat = key => mats[key] || (mats[key] = new THREE.MeshStandardMaterial({ color:TK_COL[key] ?? 0xff00ff, roughness: key==='scalp'||key==='head' ? .55 : .85, metalness:0 }));
+  const root = new THREE.Group(); root.name = 'Takuro';
+  const J = (name, parent, px, py, pz) => { const g = new THREE.Group(); g.name = name; g.userData.pivot = new THREE.Vector3(px,py,pz);
+    const pp = parent.userData.pivot || new THREE.Vector3(); g.position.set(px-pp.x, py-pp.y, pz-pp.z); parent.add(g); tk.j[name] = g; return g; };
+  const pelvis = J('pelvis', root, 0, .95, -.01);
+  const spine = J('spine', pelvis, 0, .95, -.01);
+  const head = J('head', spine, 0, 1.5, -.008);
+  const shL = J('shL', spine, .225, 1.41, -.01), elL = J('elL', shL, .26, 1.13, -.01);
+  const shR = J('shR', spine, -.225, 1.41, -.01), elR = J('elR', shR, -.26, 1.13, -.01);
+  const legL = J('legL', pelvis, .1, .95, -.01), legR = J('legR', pelvis, -.1, .95, -.01);
+  const handR = J('handR', elR, -.26, .83, 0), handL = J('handL', elL, .26, .83, 0);
+  const put = (name, group) => { const g = meshes[name]; if (!g) return; const key = name.slice(3).replace(/[LR]$/,'');
+    const m = new THREE.Mesh(g.clone().translate(...group.userData.pivot.clone().negate().toArray()), mat(key)); m.castShadow = false; group.add(m); tk.hits.push(m); return m; };
+  put('TK_waist', pelvis);
+  ['TK_torso','TK_tag','TK_neck'].forEach(n => put(n, spine));
+  ['TK_head','TK_scalp','TK_earL','TK_earR','TK_nose','TK_eyeL','TK_eyeR','TK_browL','TK_browR','TK_mouth','TK_goatee'].forEach(n => put(n, head));
+  for (const sd of ['L','R']){
+    put('TK_sleeve'+sd, tk.j['sh'+sd]); put('TK_uarm'+sd, tk.j['sh'+sd]);
+    put('TK_farm'+sd, tk.j['el'+sd]); put('TK_hand'+sd, tk.j['el'+sd]);
+    ['TK_thigh','TK_shoe','TK_sole'].forEach(n => put(n+sd, tk.j['leg'+sd]));
+  }
+  // 小道具：ほうき（右手）と畳む服（両手の間）
+  meshes.TK_broomStick.translate(-.9, -.82, 0); meshes.TK_broomHead.translate(-.9, -.82, 0); meshes.TK_cloth.translate(-.9, 0, 0);
+  const broom = new THREE.Group();
+  broom.add(new THREE.Mesh(meshes.TK_broomStick, mat('broomStick')));
+  const bh = new THREE.Mesh(meshes.TK_broomHead.clone(), mat('broomHead')); broom.add(bh);
+  broom.position.set(0, .02, 0); broom.rotation.set(.82, 0, 0); broom.visible = false; handR.add(broom);
+  // ほうきは柄の中ほどを握る
+  const cloth = new THREE.Mesh(meshes.TK_cloth, mat('cloth')); cloth.visible = false; scene.add(cloth);
+  tk.props = { broom, cloth };
+  root.position.copy(tk.pos); root.rotation.y = tk.yaw; scene.add(root);
+  tk.root = root; tk.ready = true; tk.next = 8 + Math.random()*8;
+}
+/* ---- ポーズ（関節の角度）---- */
+const sn = Math.sin, cs = Math.cos;
+const ease = x => x<0?0:x>1?1:x*x*(3-2*x);
+function tkPose(name, t){
+  const P = { pelvisY:0, spineX:.02*sn(t*1.6), spineY:0, spineZ:0, headX:0, headY:0, headZ:0,
+    shLX:.05, shLZ:.07, shLY:0, elLX:-.12, shRX:.05, shRZ:-.07, shRY:0, elRX:-.12, legLX:0, legRX:0 };
+  if (name === 'idle'){ P.spineZ = .015*sn(t*.7); P.headY = .1*sn(t*.4); }
+  else if (name === 'walk'){
+    const w = t*6.4; P.legLX = .42*sn(w); P.legRX = -.42*sn(w); P.shLX = -.32*sn(w); P.shRX = .32*sn(w);
+    P.elLX = P.elRX = -.25; P.pelvisY = .018*Math.abs(cs(w)); P.spineX = .05; P.spineY = .06*sn(w);
+  }
+  else if (name === 'greet'){
+    const up = ease(t/.5) * (1-ease((t-1.7)/.4));
+    P.shRX = -1.15*up; P.shRZ = -.07 - 1.25*up; P.elRX = -1.5*up; P.shRY = .35*sn(t*11)*up; P.headZ = .08*up;
+    const bow = ease((t-2.0)/.35) * (1-ease((t-2.9)/.4));
+    P.spineX += .5*bow; P.headX = .15*bow; P.shLX -= .25*bow; P.shRX -= .25*bow*(1-up); P.elLX -= .6*bow; P.elRX -= .6*bow*(1-up);
+  }
+  else if (name === 'sulk'){
+    P.spineX = .2; P.headX = .38; P.headY = .22*sn(t*7)*Math.max(0,1-t/3);
+    P.shLX = -.35; P.shRX = -.35; P.elLX = -1.45; P.elRX = -1.45; P.shLZ = .12; P.shRZ = -.12; P.spineZ = .04*sn(t*2.2);
+    P.pelvisY = -.01 + .008*sn(t*9);
+  }
+  else if (name === 'oops'){
+    const k = ease(t/.18), b = ease((t-.55)/.3)*(1-ease((t-1.5)/.4));
+    P.spineX = -.12*k*(1-b) + .5*b; P.headX = -.15*k*(1-b) + .15*b; P.shLZ = .07+.5*k*(1-b); P.shRZ = -.07-.5*k*(1-b);
+    P.shLX = -.3*k; P.shRX = -.3*k; P.elLX = -.5*k - .5*b; P.elRX = -.5*k - .5*b; P.pelvisY = .03*k*(1-ease((t-.3)/.2));
+  }
+  else if (name === 'hangover'){
+    P.spineX = .3 + .05*sn(t*1.3); P.spineZ = .09*sn(t*1.1); P.headX = .25; P.headZ = -.18 + .06*sn(t*1.1);
+    P.shRX = -1.85; P.shRZ = -.55; P.elRX = -2.15;           // 右手でおでこを押さえる
+    P.shLX = -.45; P.shLZ = .12; P.elLX = -1.35;              // 左手はお腹
+    P.legLX = .05*sn(t*1.1); P.legRX = -.05*sn(t*1.1); P.pelvisY = -.015;
+  }
+  else if (name === 'weakbow'){
+    const b = ease(t/.5)*(1-ease((t-1.6)/.6));
+    P.spineX = .28*(1-b) + .38*b; P.headX = .2; P.headZ = -.08*(1-b);
+    P.shRX = -1.85*(1-ease(t/.4)); P.shRZ = -.07-.48*(1-ease(t/.4)); P.elRX = -.3-1.85*(1-ease(t/.4)); P.shLX = -.2; P.elLX = -.5;
+  }
+  else if (name === 'fold'){
+    const c = (t*1.1)%1, lift = sn(c*Math.PI);
+    P.spineX = .38; P.headX = .3; P.shLX = P.shRX = -.95 - .35*lift; P.elLX = P.elRX = -.55 + .25*lift;
+    P.shLZ = .22 - .2*lift; P.shRZ = -.22 + .2*lift; P.legLX = -.05; P.legRX = .05;
+  }
+  else if (name === 'sweep'){
+    const w = sn(t*3.2);
+    P.spineX = .22; P.spineY = .35*w; P.headX = .25; P.shRX = -.55 + .15*w; P.shRZ = -.25; P.elRX = -.6;
+    P.shLX = -.95 + .15*w; P.shLZ = -.25; P.elLX = -.7; P.legLX = .12; P.legRX = -.12;
+  }
+  else if (name === 'tidy'){
+    const a = ease(((t*.55)%1)*2) * (1-ease(((t*.55)%1)*2-1)), side = Math.floor(t*.55)%2;
+    P.headX = -.25; P.spineX = -.04;
+    if (side){ P.shLX = -2.3*a - .2; P.elLX = -.35; P.shLZ = .1; } else { P.shRX = -2.3*a - .2; P.elRX = -.35; P.shRZ = -.1; }
+  }
+  return P;
+}
+function tkApply(P){
+  const j = tk.j;
+  j.pelvis.position.y = .95 + P.pelvisY;
+  j.spine.rotation.set(P.spineX, P.spineY, P.spineZ);
+  j.head.rotation.set(P.headX, P.headY, P.headZ);
+  j.shL.rotation.set(P.shLX, P.shLY, P.shLZ); j.elL.rotation.set(P.elLX, 0, 0);
+  j.shR.rotation.set(P.shRX, P.shRY, P.shRZ); j.elR.rotation.set(P.elRX, 0, 0);
+  j.legL.rotation.set(P.legLX, 0, 0); j.legR.rotation.set(P.legRX, 0, 0);
+}
+/* ---- 店長業務 ---- */
+const TK_TASKS = () => [
+  ...TABLES.map(t => ({ kind:'fold', x:-.42, z:t.z + (Math.random()-.5)*.8, yaw:-Math.PI/2, dur:8 + Math.random()*4 })),
+  ...RACKS.map(r => ({ kind:'tidy', x:-1.82, z:r.z + (Math.random()-.5)*1.4, yaw:-Math.PI/2, dur:6 + Math.random()*3 })),
+  { kind:'sweep', x:-.55, z:-13 + Math.random()*24, yaw:Math.random()*6.28, dur:9 + Math.random()*4, roam:true },
+  { kind:'sweep', x:-.55, z:-13 + Math.random()*24, yaw:Math.random()*6.28, dur:9 + Math.random()*4, roam:true },
+];
+function tkRoute(tx, tz){
+  const p = [], c = tk.pos;
+  const nearHome = (x,z) => z < -11.2;
+  if (Math.abs(c.x - TK_LANE) > .15 && !(nearHome(c.x,c.z) && nearHome(tx,tz))) p.push(new THREE.Vector3(TK_LANE, 0, c.z < -11.2 ? Math.max(c.z, -12.2) : c.z));
+  if (!(nearHome(c.x,c.z) && nearHome(tx,tz))) p.push(new THREE.Vector3(TK_LANE, 0, tz < -11.2 ? -12.2 : tz));
+  p.push(new THREE.Vector3(tx, 0, tz));
+  return p;
+}
+function tkGo(task){ tk.task = task; tk.path = tkRoute(task.x, task.z); tk.mode = 'walk'; tk.t = 0; }
+function tkStartTask(){
+  const list = TK_TASKS(); const task = list[Math.floor(Math.random()*list.length)];
+  tkGo(task);
+}
+function tkHome(){ tkGo({ kind:'home', x:TK_HOME.x, z:TK_HOME.z, yaw:TK_HOME.yaw, dur:0 }); }
+function tkTalk(){
+  if (!tk.ready || tk.talk) return;
+  let i; do { i = Math.floor(Math.random()*TK_LINES.length); } while (i === tk.lastLine && TK_LINES.length > 1);
+  tk.lastLine = i; const L = TK_LINES[i];
+  tk.talk = { line:L, t:0, shown:0, poseIdx:0, poseT:0, resume:{ mode:tk.mode, task:tk.task, path:tk.path } };
+  tk.props.broom.visible = false; tk.props.cloth.visible = false;
+  try { T.ev('staff_talk', { line:L.id }); } catch(e){}
+  haptic && haptic();
+}
+const tkBubble = $('#tkBubble'), tkBubbleText = tkBubble.querySelector('.t'), tkTag = $('#tkTag');
+tkTag.addEventListener('click', e => { e.stopPropagation(); tkTalk(); });
+const _tkv = new THREE.Vector3();
+function tkScreen(y){ _tkv.set(tk.pos.x, y, tk.pos.z).project(camera); return { x:(_tkv.x*.5+.5)*innerWidth, y:(-_tkv.y*.5+.5)*innerHeight, vis:_tkv.z < 1 && Math.abs(_tkv.x) < 1.1 && Math.abs(_tkv.y) < 1.1 }; }
+function updateTakuro(dt, time){
+  if (!tk.ready) return;
+  tk.t += dt;
+  let pose = 'idle', pt = tk.t;
+  const toPlayer = Math.atan2(state.pos.x - tk.pos.x, state.pos.z - tk.pos.z);
+  const dist = Math.hypot(state.pos.x - tk.pos.x, state.pos.z - tk.pos.z);
+  if (tk.talk){
+    const k = tk.talk; k.t += dt; k.poseT += dt;
+    tk.tyaw = toPlayer;
+    const chars = [...k.line.text]; const n = Math.min(chars.length, Math.floor(Math.max(0, k.t - .25) * 15));
+    if (n !== k.shown){ k.shown = n; tkBubbleText.textContent = chars.slice(0, n).join(''); }
+    const nextP = k.line.poses[k.poseIdx+1];
+    if (nextP && chars.slice(0, n).join('').includes(nextP[1])){ k.poseIdx++; k.poseT = 0; }
+    pose = k.line.poses[k.poseIdx][0]; pt = k.poseT;
+    if (k.t > chars.length/15 + 2.6){
+      tk.talk = null; tkBubble.style.display = 'none';
+      const r = k.resume; tk.t = 0;
+      if (r.task && r.mode === 'walk'){ tk.task = r.task; tk.path = tkRoute(r.task.x, r.task.z); tk.mode = 'walk'; }
+      else if (r.task && r.mode === 'work'){ tk.task = r.task; tk.mode = 'work'; tk.taskT = Math.min(tk.taskT, r.task.dur - 2); }
+      else { tk.mode = 'idle'; tk.next = 10 + Math.random()*10; }
+    }
+  } else if (tk.mode === 'walk'){
+    pose = 'walk';
+    const tgt = tk.path[0];
+    if (tgt){
+      const dx = tgt.x - tk.pos.x, dz = tgt.z - tk.pos.z, d = Math.hypot(dx, dz);
+      tk.tyaw = Math.atan2(dx, dz);
+      const sp = .95 * dt;
+      if (d <= sp){ tk.pos.x = tgt.x; tk.pos.z = tgt.z; tk.path.shift(); }
+      else { tk.pos.x += dx/d*sp; tk.pos.z += dz/d*sp; }
+    } else {
+      tk.tyaw = tk.task.yaw; tk.t = 0;
+      if (tk.task.kind === 'home'){ tk.mode = 'idle'; tk.next = 14 + Math.random()*14; }
+      else { tk.mode = 'work'; tk.taskT = 0; }
+    }
+  } else if (tk.mode === 'work'){
+    const task = tk.task; tk.taskT += dt; pose = task.kind; pt = tk.taskT;
+    if (task.roam){ tk.yaw += 0; const a = tk.taskT*.35 + task.yaw; tk.tyaw = a + Math.PI/2; tk.pos.x = clamp(-.75 + .3*Math.cos(a), -1.0, -.1); tk.pos.z = clamp(task.z + .5*Math.sin(a), -12.9, 12.9); }
+    tk.props.broom.visible = task.kind === 'sweep';
+    tk.props.cloth.visible = task.kind === 'fold';
+    if (tk.taskT > task.dur){ tk.props.broom.visible = tk.props.cloth.visible = false; Math.random() < .45 ? tkStartTask() : tkHome(); }
+  } else {
+    // 待機：お客さんが近いと顔を向ける
+    tk.next -= dt;
+    if (dist < 5) tk.tyaw = toPlayer; else tk.tyaw = TK_HOME.yaw;
+    if (tk.next <= 0 && dist > 2.2) tkStartTask();
+  }
+  // 体の向きをなめらかに
+  tk.yaw += wrapA(tk.tyaw - tk.yaw) * Math.min(1, dt*5);
+  tk.root.position.set(tk.pos.x, 0, tk.pos.z); tk.root.rotation.y = tk.yaw;
+  tkApply(tkPose(pose, pt));
+  if (tk.props.cloth.visible){
+    const hL = tk.j.handL.getWorldPosition(new THREE.Vector3()), hR = tk.j.handR.getWorldPosition(new THREE.Vector3());
+    tk.props.cloth.position.copy(hL).add(hR).multiplyScalar(.5); tk.props.cloth.position.y -= .03;
+    tk.props.cloth.rotation.set(0, tk.yaw, 0); tk.props.cloth.rotateX(.3*Math.sin(tk.taskT*1.1*Math.PI*2));
+  }
+  // 名札と吹き出し
+  const sc = tkScreen(1.92);
+  const showTag = !tk.talk && !state.dig && dist < 9 && sc.vis;
+  tkTag.style.display = showTag ? 'block' : 'none';
+  if (showTag) tkTag.style.transform = `translate(${sc.x}px,${sc.y}px) translate(-50%,-100%)`;
+  if (tk.talk){
+    const b = tkScreen(2.0);
+    tkBubble.style.display = b.vis ? 'block' : 'none';
+    tkBubble.style.transform = `translate(${clamp(b.x, 170, innerWidth-170)}px,${Math.max(b.y, 130)}px) translate(-50%,-100%)`;
+  }
+}
+function pickTakuro(){ if (!tk.ready) return false; return ray.intersectObjects(tk.hits, false).length > 0; }
 
 /* ===== 商品をシーンに反映 ===== */
 function applyItems(){
@@ -1253,6 +1484,8 @@ function pickAt(cx, cy){
 const floorPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
 function handleTap(cx, cy){
   const slot = pickAt(cx, cy);
+  if (!state.dig && pickTakuro()){ const hs = ray.intersectObjects(interactables, false); const ht = ray.intersectObjects(tk.hits, false);
+    if (!hs.length || ht[0].distance < hs[0].distance){ tkTalk(); return; } }
   if (slot){
     if (state.dig && slot === digSlot()) openPanel(slot);
     else if (state.dig && slot.startsWith(state.dig.zone + '-')){ const i = state.dig.list.indexOf(slot); if (i >= 0){ state.dig.idx = i; focusDig(.38); tick(); haptic(); } }
@@ -1477,6 +1710,7 @@ function frame(){
   state.mag.intensity = 1.6 + Math.sin(time*.8)*.6 + b*7;
   state.ledMat.color.setRGB(0, .9 + b*1.6, 1.6 + b*2);
   updateTrain(time);
+  updateTakuro(dt, time);
   drawBoard(performance.now());
   composer.render();
   requestAnimationFrame(frame);
