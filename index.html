@@ -794,7 +794,26 @@ function cutGeo(w, h, back){
   }
   g.computeVertexNormals(); return g;
 }
+const JINF = {}; const jinfTexCache = {};
+async function loadJinf(){
+  const ld = new GLTFLoader(); const dr = new DRACOLoader(); dr.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); ld.setDRACOLoader(dr);
+  const g = await ld.loadAsync('assets/jinf/jackets.glb?v=1');
+  g.scene.traverse(o => { if (o.isMesh){ o.updateWorldMatrix(true,false); const geo = o.geometry.clone(); geo.applyMatrix4(o.matrixWorld); geo.computeBoundingBox(); geo.translate(0, -geo.boundingBox.max.y + .015, 0); JINF[o.name.replace(/^JI_/,'')] = geo; } });
+}
+function jinfTex(handle){
+  if (!jinfTexCache[handle]){ const t = new THREE.TextureLoader().load(`assets/jinf/${encodeURIComponent(handle)}.webp?v=1`); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.anisotropy = 4; jinfTexCache[handle] = t; }
+  return jinfTexCache[handle];
+}
 function photoCard(s, handle){
+  if (JINF[handle]){
+    if (!s.inf){
+      s.infMat = new THREE.MeshStandardMaterial({ roughness:.88, metalness:0 });
+      s.inf = new THREE.Mesh(JINF[handle], s.infMat); s.inf.userData.slot = s.body.userData.slot; interactables.push(s.inf);
+      s.card = new THREE.Group(); s.card.add(s.inf); s.body.parent.add(s.card); s.cardMat = s.infMat;
+    }
+    if (s.cardHandle !== handle){ s.inf.geometry = JINF[handle]; s.infMat.map = jinfTex(handle); s.infMat.needsUpdate = true; s.cardHandle = handle; }
+    return;
+  }
   if (!s.card){
     s.card = new THREE.Group();
     s.cardMat = new THREE.MeshStandardMaterial({ alphaTest:.45, roughness:.88, metalness:0 });
@@ -845,6 +864,7 @@ async function loadGarments(){
     const sp = new THREE.SpotLight(0xffe2c2, 9, 6.5, .62, .75, 1.4);
     sp.position.set(-.9, 3.35, r.z); sp.target.position.set(-2.55, .95, r.z); scene.add(sp, sp.target);
   }
+  try { await loadJinf(); } catch(e){ console.warn('jinf', e); }
   state.garments3d = true;
   applyItems();
 }
