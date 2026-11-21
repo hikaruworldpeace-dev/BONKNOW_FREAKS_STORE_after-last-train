@@ -772,7 +772,7 @@ let GX = null, clothTex = null;
 function photoTex(handle){
   if (!photoTexCache[handle]){
     const t = new THREE.TextureLoader().load(`assets/jtex/${encodeURIComponent(handle)}.jpg`);
-    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; photoTexCache[handle] = t;
+    t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.anisotropy = 4; photoTexCache[handle] = t;
   }
   return photoTexCache[handle];
 }
