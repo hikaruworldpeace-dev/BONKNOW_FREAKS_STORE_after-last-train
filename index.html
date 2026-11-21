@@ -202,8 +202,7 @@ body.digging #backBtn{display:flex}
     <div class="info"><div id="dZone"></div><div id="dTitle"></div><div id="dPrice"></div></div>
     <button class="arr" id="dNext" aria-label="次の服">›</button>
   </div>
-  <div class="dsz" id="dSizes"></div>
-  <div class="dmore"><button id="dOpen" class="cta" style="flex:none;padding:12px 22px">詳細・サイズを選ぶ</button></div>
+  <div class="acts"><button class="ghost" id="dOpen">詳細を見る</button><button class="cta" id="dAdd">カートへ</button></div>
   <div class="foot"><span id="dHint">← → でめくる　ENTER 詳細</span><button id="dExit">↓ もどる</button></div>
 </div>
 <div id="tip"></div>
@@ -1019,17 +1018,17 @@ function renderDig(){
   const slot = digSlot(), it = state.items[slot], z = ZONES.find(z => z.id === d.zone);
   $('#dZone').textContent = `${z.label}　${d.idx+1} / ${d.list.length}`;
   $('#dTitle').textContent = it.title;
-  $('#dPrice').textContent = it.available ? `${yen(it.price)}（税込）` : 'SOLD OUT';
-  const box = $('#dSizes'); box.innerHTML = '';
-  const lbl = document.createElement('div'); lbl.className = 'lbl';
-  lbl.textContent = it.available ? '在庫 ' + it.variants.map(v => v.available ? v.size : `${v.size}×`).join('  ') : 'このアイテムは売り切れ';
-  box.appendChild(lbl);
+  const av = it.variants.filter(v => v.available);
+  $('#dPrice').textContent = it.available ? `${yen(it.price)}　在庫 ${av.map(v => v.size).join(' / ')}` : 'SOLD OUT';
+  $('#dAdd').disabled = !it.available;
+  $('#dAdd').textContent = !it.available ? 'SOLD' : av.length > 1 ? 'サイズを選ぶ' : 'カートへ';
   $('#dPrev').disabled = d.idx === 0; $('#dNext').disabled = d.idx === d.list.length - 1;
   el.classList.toggle('show', !$('#panel').classList.contains('open'));
 }
 $('#dPrev').onclick = () => flip(-1);
 $('#dNext').onclick = () => flip(1);
 $('#dOpen').onclick = () => { const s = digSlot(); if (s) openPanel(s); };
+$('#dAdd').onclick = () => { const s = digSlot(); if (!s) return; const av = state.items[s].variants.filter(v => v.available); if (av.length === 1) addToCart(s, av[0].id, 'dig'); else openPanel(s); };
 const uiExitDig = () => navClose('dig', () => exitDig());
 $('#dExit').onclick = uiExitDig;
 $('#backBtn').onclick = () => { if ($('#panel').classList.contains('open')) navClose('panel', () => closePanel()); else uiExitDig(); };
