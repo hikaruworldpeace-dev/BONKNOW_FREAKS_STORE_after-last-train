@@ -200,6 +200,33 @@ body.cine #app::after{opacity:1}
 #photoSheet footer{display:flex;gap:10px}
 #photoSheet footer button,#photoSheet footer a{flex:1;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:.14em;padding:13px 10px;border:1px solid rgba(255,255,255,.22);border-radius:2px;color:var(--paper);text-decoration:none}
 #photoSheet footer .cta{background:var(--red);border-color:var(--red)}
+
+#camBtn{font-size:14px;padding:7px 11px}
+#camUI{position:fixed;inset:0;z-index:9;display:none;pointer-events:none}
+body.cam #camUI{display:block}
+body.cam .hud, body.cam #map, body.cam #photoBtn, body.cam #tkTag{display:none !important}
+#camUI .mask{position:absolute;left:0;right:0;background:rgba(0,0,0,.72)}
+#camUI .frame{position:absolute;border:1px solid rgba(255,255,255,.35)}
+#camUI .frame i{position:absolute;width:26px;height:26px;border:3px solid #fff}
+#camUI .frame i:nth-of-type(1){left:-2px;top:-2px;border-right:0;border-bottom:0}
+#camUI .frame i:nth-of-type(2){right:-2px;top:-2px;border-left:0;border-bottom:0}
+#camUI .frame i:nth-of-type(3){left:-2px;bottom:-2px;border-right:0;border-top:0}
+#camUI .frame i:nth-of-type(4){right:-2px;bottom:-2px;border-left:0;border-top:0}
+#camUI .grid{position:absolute;inset:0;background:
+  linear-gradient(90deg,transparent calc(33.33% - .5px),rgba(255,255,255,.22) 33.33%,transparent calc(33.33% + .5px),transparent calc(66.66% - .5px),rgba(255,255,255,.22) 66.66%,transparent calc(66.66% + .5px)),
+  linear-gradient(0deg,transparent calc(33.33% - .5px),rgba(255,255,255,.22) 33.33%,transparent calc(33.33% + .5px),transparent calc(66.66% - .5px),rgba(255,255,255,.22) 66.66%,transparent calc(66.66% + .5px))}
+#camUI .focus{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border:1.5px solid rgba(255,214,0,.9);border-radius:2px}
+#camUI .rec{position:absolute;top:calc(14px + env(safe-area-inset-top));left:18px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:#fff}
+#camUI .rec b{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:8px;animation:recb 1.2s steps(2) infinite}
+@keyframes recb{50%{opacity:0}}
+#camUI .meta{position:absolute;top:calc(14px + env(safe-area-inset-top));right:18px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:rgba(255,255,255,.8);text-align:right}
+#camUI .hintc{position:absolute;left:0;right:0;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.65)}
+#camUI .bar{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom));display:flex;justify-content:center;align-items:center;gap:46px;pointer-events:auto}
+#shutter{width:76px;height:76px;border-radius:50%;border:4px solid #fff;background:transparent;padding:5px}
+#shutter span{display:block;width:100%;height:100%;border-radius:50%;background:#fff;transition:transform .12s}
+#shutter:active span{transform:scale(.88)}
+#camClose{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:22px}
+#camUI .spacer{width:48px}
 </style>
 </head>
 <body>
@@ -211,6 +238,7 @@ body.cine #app::after{opacity:1}
   
 </div>
 <div id="tools" class="hud">
+  <button class="btn" id="camBtn" aria-label="カメラ">📷</button>
   <button class="btn" id="soundBtn">♪ OFF</button>
   <button class="btn" id="listBtn">⌕ さがす</button>
   <button class="btn" id="cartBtn">CART<b id="cartCount">0</b></button>
@@ -232,10 +260,19 @@ body.cine #app::after{opacity:1}
 </div>
 <div id="tip"></div>
 <div id="toast"></div>
-<button id="photoBtn">📸 写真を撮る</button>
+<div id="camUI">
+  <div class="mask m1"></div><div class="mask m2"></div>
+  <div class="frame"><div class="grid"></div><i></i><i></i><i></i><i></i></div>
+  <div class="focus"></div>
+  <div class="rec"><b></b>AFTER LAST TRAIN</div>
+  <div class="meta" id="camMeta"></div>
+  <div class="hintc" id="camHint">ドラッグで向きを変えて、シャッター</div>
+  <div class="bar"><button id="camClose" aria-label="カメラを閉じる">×</button><button id="shutter" aria-label="撮影"><span></span></button><div class="spacer"></div></div>
+</div>
+<button id="photoBtn">📸 ここで撮る</button>
 <div id="photoFlash"></div>
 <div class="sheet" id="photoSheet"><div class="in">
-  <header><h3>PHOTO SPOT</h3><button data-close aria-label="閉じる">×</button></header>
+  <header><h3>PHOTO</h3><button data-close aria-label="閉じる">×</button></header>
   <div class="pv"><img id="photoImg" alt="AFTER LAST TRAIN の写真"><p class="note">長押しでも保存できます</p></div>
   <footer><a id="photoSave" download="bonknow-after-last-train.jpg">保存する</a><button id="photoShare" class="cta">シェアする</button></footer>
 </div></div>
@@ -1173,34 +1210,59 @@ function coverDraw(g, img, x, y, w, h){
   const iw = img.width || img.videoWidth, ih = img.height || img.videoHeight, s = Math.max(w/iw, h/ih);
   const sw = w/s, sh = h/s; g.drawImage(img, (iw-sw)/2, (ih-sh)/2, sw, sh, x, y, w, h);
 }
-async function takePhoto(){
-  if (photoBusy) return; photoBusy = true; haptic(20);
-  // 構図に合わせて立ち位置と向きを整える
+/* カメラモード：どこでもレンズをのぞいて撮れる */
+const camFrame = () => { // 写真になる範囲（1080×1000 と同じ比率）を画面の真ん中に
+  const W = innerWidth, H = innerHeight, ar = 1080/1000;
+  let w = W, h = W / ar; if (h > H * .74){ h = H * .74; w = h * ar; }
+  return { x:(W - w)/2, y:Math.max(56, (H - h)/2 - 30), w, h };
+};
+function layoutCam(){
+  const f = camFrame(), ui = $('#camUI');
+  ui.querySelector('.m1').style.cssText = `top:0;height:${f.y}px`;
+  ui.querySelector('.m2').style.cssText = `top:${f.y + f.h}px;bottom:0`;
+  ui.querySelector('.frame').style.cssText = `left:${f.x}px;top:${f.y}px;width:${f.w}px;height:${f.h}px`;
+  ui.querySelector('.focus').style.top = `${f.y + f.h/2}px`;
+  $('#camHint').style.top = `${f.y + f.h + 14}px`;
+}
+function enterCam(){
+  if (state.camMode) return;
+  if (state.dig) uiExitDig && uiExitDig();
+  state.camMode = true; document.body.classList.add('cam'); layoutCam(); haptic(12);
+  const pad = n => String(n).padStart(2,'0'); const d = new Date();
+  $('#camMeta').innerHTML = `${pad(d.getHours())}:${pad(d.getMinutes())}<br>BONKNOW STA.`;
+  T.ev('photo_take', { props:{ step:'open' } });
+}
+function exitCam(){ state.camMode = false; document.body.classList.remove('cam'); }
+addEventListener('resize', () => { if (state.camMode) layoutCam(); });
+async function alignToSpot(){
   const from = { x:state.pos.x, z:state.pos.z, yaw:state.yaw, pitch:state.pitch };
   const dur = 650, t0 = performance.now();
   await new Promise(done => { const step = () => { const k = ease((performance.now()-t0)/dur);
       state.pos.x = from.x + (PHOTO_SPOT.x - from.x)*k; state.pos.z = from.z + (PHOTO_SPOT.z - from.z)*k;
       state.yaw = state.tyaw = from.yaw + wrapA(PHOTO_SPOT.yaw - from.yaw)*k; state.pitch = state.tpitch = from.pitch + (PHOTO_SPOT.pitch - from.pitch)*k;
       k < 1 ? requestAnimationFrame(step) : done(); }; step(); });
-  await new Promise(r => setTimeout(r, 120));
-  // 3Dの景色を、高めの解像度で1枚描いてそのまま取り込む
-  const W = 1080, H = 1350;
-  const shot = document.createElement('canvas'); shot.width = W; shot.height = 1000;
+}
+function renderShot(f){
+  // 画面に見えている枠の中だけを、1080×1000 で描き直して取り込む
+  const W = 1080, H = 1000, shot = document.createElement('canvas'); shot.width = W; shot.height = H;
   const prevPR = renderer.getPixelRatio(), size = renderer.getSize(new THREE.Vector2());
-  const aspect = camera.aspect;
-  camera.aspect = W/1000; camera.updateProjectionMatrix();
-  renderer.setPixelRatio(1); renderer.setSize(W, 1000, false); composer.setSize(W, 1000);
-  photoMark.visible = false; const tagWas = tkTag.style.display; tkTag.style.display = 'none';
-  composer.render(); shot.getContext('2d').drawImage(renderer.domElement, 0, 0, W, 1000);
-  photoMark.visible = true; tkTag.style.display = tagWas;
-  camera.aspect = aspect; camera.updateProjectionMatrix(); renderer.setPixelRatio(prevPR); renderer.setSize(size.x, size.y, false); composer.setSize(size.x, size.y);
+  camera.setViewOffset(innerWidth, innerHeight, f.x, f.y, f.w, f.h);
+  renderer.setPixelRatio(1); renderer.setSize(W, H, false); composer.setSize(W, H);
+  const markWas = photoMark && photoMark.visible; if (photoMark) photoMark.visible = false;
+  composer.render(); shot.getContext('2d').drawImage(renderer.domElement, 0, 0, W, H);
+  if (photoMark) photoMark.visible = markWas;
+  camera.clearViewOffset(); renderer.setPixelRatio(prevPR); renderer.setSize(size.x, size.y, false); composer.setSize(size.x, size.y);
+  return shot;
+}
+async function takePhoto(){
+  if (photoBusy) return; photoBusy = true; haptic(25);
+  const shot = renderShot(camFrame());
   const fl = $('#photoFlash'); fl.style.transition = 'none'; fl.style.opacity = '.9'; requestAnimationFrame(() => { fl.style.transition = 'opacity .6s'; fl.style.opacity = '0'; });
-  // ポスターに組む
+  const W = 1080, H = 1350;
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   g.fillStyle = '#0a0b10'; g.fillRect(0, 0, W, H);
   g.drawImage(shot, 0, 0);
   const grad = g.createLinearGradient(0, 640, 0, 1000); grad.addColorStop(0, 'rgba(10,11,16,0)'); grad.addColorStop(1, 'rgba(10,11,16,1)'); g.fillStyle = grad; g.fillRect(0, 640, W, 360);
-  // 上の帯：ロゴと AFTER LAST TRAIN
   const top = g.createLinearGradient(0, 0, 0, 220); top.addColorStop(0, 'rgba(10,11,16,.85)'); top.addColorStop(1, 'rgba(10,11,16,0)'); g.fillStyle = top; g.fillRect(0, 0, W, 220);
   try { const logo = await loadImg('assets/bonknow_logo_white.png'); const lw = 300, lh = lw * logo.height / logo.width; g.drawImage(logo, 60, 56, lw, lh); } catch(e){}
   g.textBaseline = 'alphabetic';
@@ -1209,7 +1271,6 @@ async function takePhoto(){
   g.fillText('AFTER LAST TRAIN', W - 60, 92);
   g.fillStyle = 'rgba(242,239,230,.8)'; g.font = '400 24px "Space Mono", monospace';
   g.fillText(`${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())}  ${pad(now.getHours())}:${pad(now.getMinutes())}`, W - 60, 130);
-  // 下：キャッチとカートの服
   g.textAlign = 'left'; g.fillStyle = '#f2efe6'; g.font = '900 64px "Archivo Black", "Noto Sans JP", sans-serif';
   g.fillText('離れてても、', 60, 1090); g.fillText('お店で買おう。', 60, 1168);
   const line = state.cart[0]; const it = line ? byHandle(line.handle) : null;
@@ -1220,25 +1281,25 @@ async function takePhoto(){
       coverDraw(g, im, bx, by, 300, 300);
       g.fillStyle = 'rgba(242,239,230,.75)'; g.font = '400 20px "Space Mono", monospace'; g.textAlign = 'right';
       g.fillText('IN MY CART', W - 60, by + 336);
-    } catch(e){ /* 画像を読めない時は服なしで */ }
+    } catch(e){}
   }
   g.textAlign = 'left'; g.fillStyle = '#e32017'; g.fillRect(60, 1212, 120, 8);
   g.fillStyle = 'rgba(242,239,230,.7)'; g.font = '400 24px "Space Mono", monospace';
   g.fillText(location.host + location.pathname.replace(/index\.html$/, ''), 60, 1268);
   g.fillStyle = 'rgba(242,239,230,.45)'; g.font = '400 18px "Space Mono", monospace'; g.fillText('BONKNOW FREAKS — STATION STORE', 60, 1300);
-  // 仕上げ：細い枠
   g.strokeStyle = 'rgba(242,239,230,.25)'; g.lineWidth = 2; g.strokeRect(24, 24, W - 48, H - 48);
   let url;
-  try {
-    photoBlob = await new Promise(r => c.toBlob(r, 'image/jpeg', .9));
-    url = URL.createObjectURL(photoBlob);
-  } catch(e){ url = c.toDataURL('image/jpeg', .9); photoBlob = null; }
+  try { photoBlob = await new Promise(r => c.toBlob(r, 'image/jpeg', .9)); url = URL.createObjectURL(photoBlob); }
+  catch(e){ url = c.toDataURL('image/jpeg', .9); photoBlob = null; }
   $('#photoImg').src = url; $('#photoSave').href = url;
   $('#photoShare').style.display = (navigator.canShare && photoBlob && navigator.canShare({ files:[new File([photoBlob], 'p.jpg', { type:'image/jpeg' })] })) ? '' : 'none';
-  openSheet('#photoSheet'); photoBusy = false;
-  T.ev('photo_take', { handle: it ? it.handle : null });
+  exitCam(); openSheet('#photoSheet'); photoBusy = false;
+  T.ev('photo_take', { handle: it ? it.handle : null, props:{ x:+state.pos.x.toFixed(1), z:+state.pos.z.toFixed(1) } });
 }
-$('#photoBtn').onclick = e => { e.stopPropagation(); takePhoto(); };
+$('#camBtn').onclick = e => { e.stopPropagation(); enterCam(); };
+$('#shutter').onclick = e => { e.stopPropagation(); takePhoto(); };
+$('#camClose').onclick = e => { e.stopPropagation(); exitCam(); };
+$('#photoBtn').onclick = async e => { e.stopPropagation(); await alignToSpot(); enterCam(); };
 $('#photoShare').onclick = async () => {
   if (!photoBlob) return;
   try { await navigator.share({ files:[new File([photoBlob], 'bonknow-after-last-train.jpg', { type:'image/jpeg' })], text:'終電後の駅にある服屋 #BONKNOWFREAKS', url:location.origin }); T.ev('photo_share'); } catch(e){}
@@ -1703,6 +1764,7 @@ function pickAt(cx, cy){
 }
 const floorPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
 function handleTap(cx, cy){
+  if (state.camMode) return;
   const slot = pickAt(cx, cy);
   if (!state.dig && pickTakuro()){ const hs = ray.intersectObjects(interactables, false); const ht = ray.intersectObjects(tk.hits, false);
     if (!hs.length || ht[0].distance < hs[0].distance){ tkTalk(); return; } }
