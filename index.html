@@ -186,6 +186,8 @@ body.cine #app::after{opacity:1}
 #tkBubble{position:fixed;left:0;top:0;z-index:7;transform:translate(-50%,-100%);display:none;pointer-events:none;max-width:min(78vw,320px);
   background:var(--paper);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.55;font-weight:500;padding:11px 14px 12px;border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
 #tkBubble::after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-bottom:0;border-top-color:var(--paper)}
+#tkBubble.rec{pointer-events:auto;cursor:pointer}
+#tkBubble.rec::before{content:'タップで見る →';position:absolute;right:12px;bottom:-26px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--amber)}
 #tkBubble .n{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:#6b6b6b;margin-bottom:3px}
 
 #photoBtn{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;display:none;
@@ -205,13 +207,10 @@ body.cine #app::after{opacity:1}
 #photoSheet .shr .sv{background:#2b2d36}
 #photoSheet .shr .sh:active{transform:scale(.96)}
 
-#camBtn{position:fixed;right:16px;bottom:calc(170px + env(safe-area-inset-bottom));z-index:6;width:64px;height:64px;border-radius:50%;background:var(--amber);color:#0a0b10;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 6px 22px rgba(0,0,0,.5),0 0 0 4px rgba(255,176,0,.25);animation:camGlow 2.4s ease-in-out infinite}
+#camBtn{display:inline-flex;align-items:center;justify-content:center;width:44px;padding:0;background:transparent;border:0;color:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.7))}
 #camBtn svg{width:30px;height:30px}
-#camBtn span{font-family:var(--mono);font-size:8px;letter-spacing:.14em;font-weight:700}
-@keyframes camGlow{50%{box-shadow:0 6px 22px rgba(0,0,0,.5),0 0 0 9px rgba(255,176,0,.12)}}
-body.cam #camBtn, body.digging #camBtn{display:none}
-@media (min-width:900px){#camBtn{bottom:120px;right:24px}}
+#camBtn:active{transform:scale(.92)}
+body.cam #camBtn{display:none}
 #camUI{position:fixed;inset:0;z-index:9;display:none;pointer-events:none}
 body.cam #camUI{display:block}
 body.cam .hud, body.cam #map, body.cam #photoBtn, body.cam #tkTag{display:none !important}
@@ -236,7 +235,10 @@ body.cam .hud, body.cam #map, body.cam #photoBtn, body.cam #tkTag{display:none !
 #shutter span{display:block;width:100%;height:100%;border-radius:50%;background:#fff;transition:transform .12s}
 #shutter:active span{transform:scale(.88)}
 #camClose{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:22px}
-#camUI .spacer{width:48px}
+#camTalk{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center}
+#camTalk svg{width:26px;height:26px}
+#camTalk.off{opacity:.35}
+body.cam #tkBubble{z-index:10}
 </style>
 </head>
 <body>
@@ -251,6 +253,7 @@ body.cam .hud, body.cam #map, body.cam #photoBtn, body.cam #tkTag{display:none !
   <button class="btn" id="soundBtn">♪ OFF</button>
   <button class="btn" id="listBtn">⌕ さがす</button>
   <button class="btn" id="cartBtn">CART<b id="cartCount">0</b></button>
+  <button id="camBtn" aria-label="写真を撮る"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M17 10h14l3 5h6a4 4 0 0 1 4 4v19a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V19a4 4 0 0 1 4-4h6z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/><circle cx="24" cy="28" r="8" fill="none" stroke="currentColor" stroke-width="3.5"/></svg></button>
 </div>
 <div id="nav" class="hud"></div>
 <button id="backBtn" aria-label="売り場からもどる"><b>‹</b>もどる<span id="crumb"></span></button>
@@ -269,7 +272,7 @@ body.cam .hud, body.cam #map, body.cam #photoBtn, body.cam #tkTag{display:none !
 </div>
 <div id="tip"></div>
 <div id="toast"></div>
-<button id="camBtn" aria-label="写真を撮る"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M17 10h14l3 5h6a4 4 0 0 1 4 4v19a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V19a4 4 0 0 1 4-4h6z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/><circle cx="24" cy="28" r="8" fill="none" stroke="currentColor" stroke-width="3.5"/></svg><span>PHOTO</span></button>
+
 <div id="camUI">
   <div class="mask m1"></div><div class="mask m2"></div>
   <div class="frame"><div class="grid"></div><i></i><i></i><i></i><i></i></div>
@@ -277,9 +280,8 @@ body.cam .hud, body.cam #map, body.cam #photoBtn, body.cam #tkTag{display:none !
   <div class="rec"><b></b>AFTER LAST TRAIN</div>
   <div class="meta" id="camMeta"></div>
   <div class="hintc" id="camHint">ドラッグで向きを変えて、シャッター</div>
-  <div class="bar"><button id="camClose" aria-label="カメラを閉じる">×</button><button id="shutter" aria-label="撮影"><span></span></button><div class="spacer"></div></div>
+  <div class="bar"><button id="camClose" aria-label="カメラを閉じる">×</button><button id="shutter" aria-label="撮影"><span></span></button><button id="camTalk" aria-label="タクローに話しかける"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 8C13.5 8 6 14.6 6 22.5c0 5 3.1 9.3 7.8 11.8L12 41l8.2-4.6c1.2.2 2.5.3 3.8.3 10.5 0 18-6.6 18-14.2S34.5 8 24 8z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></button></div>
 </div>
-<button id="photoBtn">📸 ここで撮る</button>
 <div id="photoFlash"></div>
 <div class="sheet" id="photoSheet"><div class="in">
   <header><h3>PHOTO</h3><button data-close aria-label="閉じる">×</button></header>
@@ -370,6 +372,8 @@ const CONFIG = {
     apiVersion: '2026-10',
     collectionHandle: 'station',
   },
+  // 店長タクローのおすすめ商品：商品ページURLの /products/ のあとの部分（ハンドル）。空なら在庫のある服からランダム
+  takuro: { recommend: 'type-001-sweat-trucker-jacket-sun-faded-balance-exclusive-red' },
   // 計測（ダッシュボード用）：Supabase の URL と公開キー（anon / publishable）。空なら何も送らない
   analytics: {
     supabaseUrl: 'https://qwvntlfjbbagkmojanhs.supabase.co',
@@ -818,7 +822,6 @@ async function loadStation(onProgress){
   }
   state.baked = true;
   addLookPanels();
-  buildPhotoSpot();
   try { await loadGarments(); } catch(e){ console.warn('garments', e); }
   loadTakuro().catch(e => console.warn('takuro', e));
 }
@@ -942,10 +945,23 @@ const TK_GLB = 'assets/takuro.glb?v=1';
 const TK_HUMAN_GLB = 'assets/takuro_human.glb?v=1';
 const TK_HOME = { x:-2.15, z:-12.55, yaw:.45 };
 const TK_LANE = -.25;
+const TK_COLORS = ['黄色','赤','青','紺','ピンク','黒','白','茶色'];
+const tkRecommend = () => {
+  const want = (CONFIG.takuro && CONFIG.takuro.recommend) || '';
+  const items = Object.values(state.items || {});
+  return (want && items.find(i => i.handle === want)) || items.filter(i => i.available)[Math.floor(Math.random()*Math.max(1, items.filter(i => i.available).length))] || null;
+};
+const shortTitle = t => t.replace(/\s*[-–—]\s*BALANCE Exclusive/i, '').replace(/\s{2,}/g,' ').slice(0, 34);
 const TK_LINES = [
-  { id:'greet',  text:'こんにちは！お好みの服があれば教えてください！', poses:[['greet',0]] },
-  { id:'sulk',   text:'・・・店長とは名ばかりだよ、ほんと・・・おっと！いらっしゃいませ！', poses:[['sulk',0],['oops','おっと']] },
+  { id:'greet',    text:'こんにちは！お好みの服があれば教えてください！', poses:[['greet',0]] },
+  { id:'sulk',     text:'・・・店長とは名ばかりだよ、ほんと・・・おっと！いらっしゃいませ！', poses:[['sulk',0],['oops','おっと']] },
   { id:'hangover', text:'・・・昨日の酒が・・・おっと、いらっしゃいませ・・・', poses:[['hangover',0],['weakbow','おっと']] },
+  { id:'bonnou',   text:'ああ、そうですか・・・それは煩悩ですね。', poses:[['grin',0]] },
+  { id:'cool',     text:'お兄さんカッコいいっすね！いらっしゃいませ！', poses:[['point',0],['greet','いらっしゃい']] },
+  { id:'lucky',    text:() => `今日のラッキーカラーは、${TK_COLORS[Math.floor(Math.random()*TK_COLORS.length)]}です！`, poses:[['point',0],['greet','です']] },
+  { id:'lunch',    text:'今日のご飯何にしようかな・・・あ！いらっしゃいませ！', poses:[['think',0],['oops','あ！']] },
+  { id:'relax',    text:'ゆっくり見ていってね〜！', poses:[['wave',0]] },
+  { id:'recommend', text:() => { const it = tkRecommend(); tk.recItem = it; return it ? `おすすめ商品は「${shortTitle(it.title)}」です！` : 'おすすめは、全部です！'; }, poses:[['point',0]], rec:true },
 ];
 const TK_COL = { head:0xb87a5c, scalp:0x8f5b43, ear:0xb87a5c, nose:0xb07355, eye:0x0c0c0c, brow:0x1c1410, mouth:0x6a2c24, goatee:0x1e1612, neck:0xb37657,
   torso:0x141416, sleeve:0x141416, tag:0xe9e6dc, uarm:0xb87a5c, farm:0xb87a5c, hand:0xb87a5c, waist:0x9a8466, thigh:0x9c8768, shoe:0xe6e4dc, sole:0x1a1a1a,
@@ -1017,6 +1033,26 @@ function tkPose(name, t){
   else if (name === 'walk'){
     const w = t*6.4; P.legLX = .42*sn(w); P.legRX = -.42*sn(w); P.shLX = -.32*sn(w); P.shRX = .32*sn(w);
     P.elLX = P.elRX = -.25; P.pelvisY = .018*Math.abs(cs(w)); P.spineX = .05; P.spineY = .06*sn(w);
+  }
+  else if (name === 'grin'){        // にんまり：腕を組んで少しのけぞり、首をかしげてうなずく
+    const k = ease(t/.5);
+    P.spineX = -.08*k; P.headZ = .22*k; P.headX = -.05*k + .06*Math.max(0, sn(t*3))*k; P.headY = -.12*k;
+    P.shLX = -.38*k; P.shLZ = .12; P.shLY = -.95*k; P.elLX = -1.62*k; P.shRX = -.3*k; P.shRZ = -.12; P.shRY = .95*k; P.elRX = -1.55*k;
+    P.pelvisY = .006*sn(t*2.2);
+  }
+  else if (name === 'point'){       // こっちを指さす
+    const k = ease(t/.35);
+    P.shRX = -1.35*k; P.shRZ = -.07 - .15*k; P.elRX = -.15*k; P.spineX = .06*k; P.headX = -.04*k; P.headZ = .06*sn(t*4)*k;
+    P.shLX = -.1; P.elLX = -.3;
+  }
+  else if (name === 'think'){       // 考えごと：あごに手、上を見る
+    const k = ease(t/.45);
+    P.shRX = -1.1*k; P.shRZ = -.12; P.elRX = -2.2*k; P.shLX = -.45*k; P.shLZ = .1; P.elLX = -1.45*k;
+    P.headX = -.28*k; P.headY = .25*sn(t*.8)*k; P.spineZ = .05*k; P.spineX = -.03*k;
+  }
+  else if (name === 'wave'){        // 大きく手を振る
+    const up = ease(t/.45);
+    P.shRX = -.6*up; P.shRZ = -.07 - 2.1*up; P.elRX = -.35*up; P.shRY = .4*sn(t*9)*up; P.headZ = .1*up; P.spineZ = -.05*up;
   }
   else if (name === 'greet'){
     const up = ease(t/.5) * (1-ease((t-1.7)/.4));
@@ -1105,13 +1141,16 @@ function tkTalk(){
   if (!tk.ready || tk.talk) return;
   let i; do { i = Math.floor(Math.random()*TK_LINES.length); } while (i === tk.lastLine && TK_LINES.length > 1);
   tk.lastLine = i; const L = TK_LINES[i];
-  tk.talk = { line:L, t:0, shown:0, poseIdx:0, poseT:0, resume:{ mode:tk.mode, task:tk.task, path:tk.path } };
+  tk.recItem = null; const text = typeof L.text === 'function' ? L.text() : L.text;
+  tk.talk = { line:L, text, t:0, shown:0, poseIdx:0, poseT:0, resume:{ mode:tk.mode, task:tk.task, path:tk.path } };
+  tkBubble.classList.toggle('rec', !!(L.rec && tk.recItem));
   tk.props.broom.visible = false; tk.props.cloth.visible = false;
   try { T.ev('staff_talk', { line:L.id }); } catch(e){}
   haptic && haptic();
 }
 const tkBubble = $('#tkBubble'), tkBubbleText = tkBubble.querySelector('.t'), tkTag = $('#tkTag');
 tkTag.addEventListener('click', e => { e.stopPropagation(); tkTalk(); });
+tkBubble.addEventListener('click', e => { e.stopPropagation(); if (tk.recItem && tk.recItem.slot && !state.camMode){ T.ev('staff_talk', { handle:tk.recItem.handle, props:{ step:'recommend_open' } }); enterDig(tk.recItem.slot, { open:true }); } });
 const _tkv = new THREE.Vector3();
 function tkScreen(y){ _tkv.set(tk.pos.x, y, tk.pos.z).project(camera); return { x:(_tkv.x*.5+.5)*innerWidth, y:(-_tkv.y*.5+.5)*innerHeight, vis:_tkv.z < 1 && Math.abs(_tkv.x) < 1.1 && Math.abs(_tkv.y) < 1.1 }; }
 function updateTakuro(dt, time){
@@ -1123,12 +1162,12 @@ function updateTakuro(dt, time){
   if (tk.talk){
     const k = tk.talk; k.t += dt; k.poseT += dt;
     tk.tyaw = toPlayer;
-    const chars = [...k.line.text]; const n = Math.min(chars.length, Math.floor(Math.max(0, k.t - .25) * 15));
+    const chars = [...k.text]; const n = Math.min(chars.length, Math.floor(Math.max(0, k.t - .25) * 15));
     if (n !== k.shown){ k.shown = n; tkBubbleText.textContent = chars.slice(0, n).join(''); }
     const nextP = k.line.poses[k.poseIdx+1];
     if (nextP && chars.slice(0, n).join('').includes(nextP[1])){ k.poseIdx++; k.poseT = 0; }
     pose = k.line.poses[k.poseIdx][0]; pt = k.poseT;
-    if (k.t > chars.length/15 + 2.6){
+    if (k.t > chars.length/15 + (k.line.rec ? 4.5 : 2.6)){
       tk.talk = null; tkBubble.style.display = 'none';
       const r = k.resume; tk.t = 0;
       if (r.task && r.mode === 'walk'){ tk.task = r.task; tk.path = tkRoute(r.task.x, r.task.z); tk.mode = 'walk'; }
@@ -1264,9 +1303,38 @@ function renderShot(f){
   camera.clearViewOffset(); renderer.setPixelRatio(prevPR); renderer.setSize(size.x, size.y, false); composer.setSize(size.x, size.y);
   return shot;
 }
+// タクローがしゃべっている時は、吹き出しも写真に入れる
+function tkBubbleForShot(f){
+  if (!tk.ready || !tk.talk) return null;
+  const v = new THREE.Vector3(tk.pos.x, 2.0, tk.pos.z).project(camera);
+  if (v.z > 1) return null;
+  const sx = (v.x*.5+.5)*innerWidth, sy = (-v.y*.5+.5)*innerHeight;
+  const u = (sx - f.x)/f.w, w = (sy - f.y)/f.h;
+  if (u < -.1 || u > 1.1 || w < -.2 || w > 1.05) return null;
+  return { u, v:w, text:tk.talk.text };
+}
+function drawBubble(g, b, W, H){
+  const pad = 34, maxW = 660, fs = 40, lh = 58;
+  g.font = `700 ${fs}px "Noto Sans JP", sans-serif`;
+  const lines = []; let cur = '';
+  for (const ch of [...b.text]){ if (g.measureText(cur + ch).width > maxW - pad*2){ lines.push(cur); cur = ch; } else cur += ch; }
+  if (cur) lines.push(cur);
+  const bw = Math.min(maxW, Math.max(...lines.map(l => g.measureText(l).width)) + pad*2), bh = lines.length*lh + pad*2 + 36;
+  let tx = b.u*W, ty = b.v*H;                                     // 頭の上
+  let bx = Math.min(W - 40 - bw, Math.max(40, tx - bw/2)), by = Math.min(Math.max(ty - bh - 30, 560), H - 520 - bh);
+  g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 30; g.shadowOffsetY = 10;
+  g.fillStyle = '#f2efe6'; g.beginPath(); g.roundRect ? g.roundRect(bx, by, bw, bh, 18) : g.rect(bx, by, bw, bh); g.fill();
+  const ax = Math.min(bx + bw - 40, Math.max(bx + 40, tx));
+  if (ty > by + bh){ g.beginPath(); g.moveTo(ax - 20, by + bh - 1); g.lineTo(ax + 20, by + bh - 1); g.lineTo(ax, by + bh + 30); g.closePath(); g.fill(); }
+  g.restore();
+  g.fillStyle = '#6b6b6b'; g.font = '400 22px "Space Mono", monospace'; g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillText('店長 タクロー', bx + pad, by + pad - 6);
+  g.fillStyle = '#0a0b10'; g.font = `700 ${fs}px "Noto Sans JP", sans-serif`;
+  lines.forEach((l, i) => g.fillText(l, bx + pad, by + pad + 30 + i*lh));
+}
 async function takePhoto(){
   if (photoBusy) return; photoBusy = true; haptic(25);
-  const shot = renderShot(camFrame());
+  const fr = camFrame(); const bubbleInfo = tkBubbleForShot(fr); const shot = renderShot(fr);
   const fl = $('#photoFlash'); fl.style.transition = 'none'; fl.style.opacity = '.9'; requestAnimationFrame(() => { fl.style.transition = 'opacity .6s'; fl.style.opacity = '0'; });
   const W = 1080, H = 1920;
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
@@ -1284,6 +1352,7 @@ async function takePhoto(){
   g.fillStyle = '#e32017'; g.fillRect(64, Y + 168, 120, 8);
   // 下：お店のアドレス（ストーリーの返信欄に隠れない位置）
   const bot = g.createLinearGradient(0, 1300, 0, H); bot.addColorStop(0, 'rgba(8,9,14,0)'); bot.addColorStop(1, 'rgba(8,9,14,.85)'); g.fillStyle = bot; g.fillRect(0, 1300, W, H - 1300);
+  if (bubbleInfo) drawBubble(g, bubbleInfo, W, H);
   const line = state.cart[0]; const it = line ? byHandle(line.handle) : null;
   if (it && it.images[0]){
     try {
@@ -1308,7 +1377,11 @@ async function takePhoto(){
 $('#camBtn').onclick = e => { e.stopPropagation(); enterCam(); };
 $('#shutter').onclick = e => { e.stopPropagation(); takePhoto(); };
 $('#camClose').onclick = e => { e.stopPropagation(); exitCam(); };
-$('#photoBtn').onclick = async e => { e.stopPropagation(); await alignToSpot(); enterCam(); };
+$('#camTalk').onclick = e => { e.stopPropagation();
+  const d = tk.ready ? Math.hypot(state.pos.x - tk.pos.x, state.pos.z - tk.pos.z) : 99;
+  if (d > 9){ toast('タクローの近くで話しかけてね'); return; }
+  tkTalk(); };
+
 const photoFile = () => new File([photoBlob], 'bonknow-after-last-train.jpg', { type:'image/jpeg' });
 const canShareFile = () => !!(photoBlob && navigator.canShare && navigator.canShare({ files:[photoFile()] }));
 const shareText = '終電後の駅にある服屋 #BONKNOWFREAKS';
@@ -1784,7 +1857,7 @@ function pickAt(cx, cy){
 }
 const floorPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
 function handleTap(cx, cy){
-  if (state.camMode) return;
+  if (state.camMode){ pickAt(cx, cy); if (pickTakuro()) tkTalk(); return; }
   const slot = pickAt(cx, cy);
   if (!state.dig && pickTakuro()){ const hs = ray.intersectObjects(interactables, false); const ht = ray.intersectObjects(tk.hits, false);
     if (!hs.length || ht[0].distance < hs[0].distance){ tkTalk(); return; } }
@@ -2013,7 +2086,6 @@ function frame(){
   state.ledMat.color.setRGB(0, .9 + b*1.6, 1.6 + b*2);
   updateTrain(time);
   updateTakuro(dt, time);
-  updatePhotoSpot(time);
   drawBoard(performance.now());
   composer.render();
   requestAnimationFrame(frame);
