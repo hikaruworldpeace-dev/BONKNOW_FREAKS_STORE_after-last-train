@@ -1303,30 +1303,50 @@ function renderShot(f){
   camera.clearViewOffset(); renderer.setPixelRatio(prevPR); renderer.setSize(size.x, size.y, false); composer.setSize(size.x, size.y);
   return shot;
 }
-// タクローがしゃべっている時は、吹き出しも写真に入れる
+// タクローがしゃべっている時は、吹き出しも写真に入れる（顔にかぶらない位置を選ぶ）
 function tkBubbleForShot(f){
   if (!tk.ready || !tk.talk) return null;
-  const v = new THREE.Vector3(tk.pos.x, 2.0, tk.pos.z).project(camera);
-  if (v.z > 1) return null;
-  const sx = (v.x*.5+.5)*innerWidth, sy = (-v.y*.5+.5)*innerHeight;
-  const u = (sx - f.x)/f.w, w = (sy - f.y)/f.h;
-  if (u < -.1 || u > 1.1 || w < -.2 || w > 1.05) return null;
-  return { u, v:w, text:tk.talk.text };
+  const P = y => { const v = new THREE.Vector3(tk.pos.x, y, tk.pos.z).project(camera);
+    return { u:((v.x*.5+.5)*innerWidth - f.x)/f.w, v:((-v.y*.5+.5)*innerHeight - f.y)/f.h, z:v.z }; };
+  const top = P(1.84), face = P(1.66), chin = P(1.5);
+  if (face.z > 1 || face.u < -.15 || face.u > 1.15 || face.v < -.1 || face.v > 1.1) return null;
+  return { top, face, chin, text:tk.talk.text };
+}
+function wrapText(g, text, maxW){
+  const lines = []; let cur = '';
+  for (const ch of [...text]){ if (cur && g.measureText(cur + ch).width > maxW){ lines.push(cur); cur = ch; } else cur += ch; }
+  if (cur) lines.push(cur); return lines;
 }
 function drawBubble(g, b, W, H){
-  const pad = 34, maxW = 660, fs = 40, lh = 58;
+  const pad = 34, fs = 40, lh = 58, SAFE_TOP = 540, SAFE_BOT = H - 470;
   g.font = `700 ${fs}px "Noto Sans JP", sans-serif`;
-  const lines = []; let cur = '';
-  for (const ch of [...b.text]){ if (g.measureText(cur + ch).width > maxW - pad*2){ lines.push(cur); cur = ch; } else cur += ch; }
-  if (cur) lines.push(cur);
-  const bw = Math.min(maxW, Math.max(...lines.map(l => g.measureText(l).width)) + pad*2), bh = lines.length*lh + pad*2 + 36;
-  let tx = b.u*W, ty = b.v*H;                                     // 頭の上
-  let bx = Math.min(W - 40 - bw, Math.max(40, tx - bw/2)), by = Math.min(Math.max(ty - bh - 30, 560), H - 520 - bh);
-  g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 30; g.shadowOffsetY = 10;
-  g.fillStyle = '#f2efe6'; g.beginPath(); g.roundRect ? g.roundRect(bx, by, bw, bh, 18) : g.rect(bx, by, bw, bh); g.fill();
-  const ax = Math.min(bx + bw - 40, Math.max(bx + 40, tx));
-  if (ty > by + bh){ g.beginPath(); g.moveTo(ax - 20, by + bh - 1); g.lineTo(ax + 20, by + bh - 1); g.lineTo(ax, by + bh + 30); g.closePath(); g.fill(); }
-  g.restore();
+  const fx = b.face.u*W, fy = b.face.v*H, topY = b.top.v*H, chinY = b.chin.v*H;
+  const headR = Math.max(40, (chinY - topY) * .75);
+  const measure = maxW => { const lines = wrapText(g, b.text, maxW - pad*2); const bw = Math.min(maxW, Math.max(...lines.map(l => g.measureText(l).width)) + pad*2); return { lines, bw, bh: lines.length*lh + pad*2 + 36 }; };
+  let m = measure(660), bx, by, tail;
+  if (topY - m.bh - 34 >= SAFE_TOP){                                   // ① 頭の上に余裕がある
+    bx = fx - m.bw/2; by = topY - m.bh - 34; tail = 'down';
+  } else {
+    const leftSpace = fx - headR - 44 - 30, rightSpace = W - fx - headR - 44 - 30;
+    const side = rightSpace >= leftSpace ? 'right' : 'left', space = Math.max(leftSpace, rightSpace);
+    if (space >= 330){                                                  // ② 顔の横
+      m = measure(Math.min(660, space));
+      bx = side === 'right' ? fx + headR + 44 : fx - headR - 44 - m.bw;
+      by = fy - m.bh/2; tail = side === 'right' ? 'left' : 'right';
+    } else {                                                            // ③ あごの下
+      m = measure(660); bx = fx - m.bw/2; by = chinY + headR*.6 + 34; tail = 'up';
+    }
+  }
+  bx = Math.min(W - 30 - m.bw, Math.max(30, bx)); by = Math.min(SAFE_BOT - m.bh, Math.max(SAFE_TOP, by));
+  const { lines, bw, bh } = m;
+  g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 30; g.shadowOffsetY = 10; g.fillStyle = '#f2efe6';
+  g.beginPath(); g.roundRect ? g.roundRect(bx, by, bw, bh, 18) : g.rect(bx, by, bw, bh); g.fill();
+  g.beginPath();
+  if (tail === 'down'){ const ax = Math.min(bx + bw - 40, Math.max(bx + 40, fx)); g.moveTo(ax - 20, by + bh - 1); g.lineTo(ax + 20, by + bh - 1); g.lineTo(ax, by + bh + 30); }
+  else if (tail === 'up'){ const ax = Math.min(bx + bw - 40, Math.max(bx + 40, fx)); g.moveTo(ax - 20, by + 1); g.lineTo(ax + 20, by + 1); g.lineTo(ax, by - 30); }
+  else { const ay = Math.min(by + bh - 34, Math.max(by + 34, fy)); const ex = tail === 'left' ? bx + 1 : bx + bw - 1, dx = tail === 'left' ? -30 : 30;
+    g.moveTo(ex, ay - 18); g.lineTo(ex, ay + 18); g.lineTo(ex + dx, ay); }
+  g.closePath(); g.fill(); g.restore();
   g.fillStyle = '#6b6b6b'; g.font = '400 22px "Space Mono", monospace'; g.textAlign = 'left'; g.textBaseline = 'top';
   g.fillText('店長 タクロー', bx + pad, by + pad - 6);
   g.fillStyle = '#0a0b10'; g.font = `700 ${fs}px "Noto Sans JP", sans-serif`;
